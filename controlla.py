@@ -15,6 +15,8 @@ from urllib.parse import unquote
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_CONFIG = HERE / 'config.json'
+# Attributi Windows dei file solo nel cloud (offline, recall on open, recall on data access).
+CLOUD = 0x1000 | 0x40000 | 0x400000
 
 def stamp():
     return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -37,6 +39,9 @@ def signature(path, old=None, full=False):
     meta = (info.st_size, info.st_mtime_ns)
     if old and not full and old['kind'] == 'file' and meta == (old['size'], old['mtime']):
         return old
+    if getattr(info, 'st_file_attributes', 0) & CLOUD:
+        # Leggerlo lo scaricherebbe dal cloud: bastano dimensione e data.
+        return {'kind': 'file', 'size': meta[0], 'mtime': meta[1], 'hash': None}
     sha = digest(path)
     after = path.stat(follow_symlinks=False)
     if (after.st_size, after.st_mtime_ns) != meta:
@@ -46,7 +51,12 @@ def signature(path, old=None, full=False):
 def same(a, b):
     if a is None or b is None:
         return a == b
-    return (a['kind'], a['hash'], a['size']) == (b['kind'], b['hash'], b['size'])
+    if (a['kind'], a['size']) != (b['kind'], b['size']):
+        return False
+    if a['hash'] and b['hash']:
+        return a['hash'] == b['hash']
+    # Senza impronta (cartelle, file solo nel cloud) confronta la data.
+    return a['kind'] == 'directory' or a['mtime'] == b['mtime']
 
 def packed(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
@@ -142,6 +152,11 @@ def walk(root, config, previous, full=False):
 def beneath(path, prefix):
     return not prefix or path == prefix or path.startswith(prefix + '/')
 
+def matches(row, root=None, prefix=None, depth=None):
+    # Filtri comuni a pending e review; depth conta i livelli sotto la radice (1 = solo la radice).
+    return ((not root or row['root'] == root) and (not prefix or beneath(row['path'], prefix))
+            and (depth is None or row['path'].count('/') < depth))
+
 def under_any(path, prefixes):
     # Equivale ad any(beneath(path, p) for p in prefixes), in tempo proporzionale alla profondità.
     if '' in prefixes:
@@ -206,21 +221,27 @@ def scan(config, root_ids=None, full=False):
         con.close()
     return results
 
-def pending(config, root=None, prefix=None, limit=100):
+def pending(config, root=None, prefix=None, limit=100, depth=None):
+    if depth is not None and depth < 1:
+        raise ValueError('Profondità non valida: usare un intero >= 1')
     con = connect(Path(config['database']))
     try:
-        all_rows = [dict(r) for r in con.execute("SELECT * FROM events WHERE status='pending' ORDER BY id")]
-        rows = [r for r in all_rows if (not root or r['root'] == root) and (not prefix or beneath(r['path'], prefix))]
+        # Dal più recente: con il limite restano in vista i cambiamenti nuovi.
+        all_rows = [dict(r) for r in con.execute("SELECT * FROM events WHERE status='pending' ORDER BY id DESC")]
+        rows = [r for r in all_rows if matches(r, root, prefix, depth)]
         # Nessun rinomino viene applicato: solo suggerimenti univoci fra eventi pendenti.
         # Indice per impronta costruito una volta: ogni evento è decodificato al massimo una volta.
+        # Senza impronta (cartelle, file solo nel cloud) non c'è suggerimento.
         deleted_by_hash, added_by_hash = {}, {}
         for r in all_rows:
             if r['kind'] == 'deleted':
                 sha = (json.loads(r['before_sig']) or {}).get('hash')
-                deleted_by_hash.setdefault(sha, []).append(r)
+                if sha:
+                    deleted_by_hash.setdefault(sha, []).append(r)
             elif r['kind'] == 'added':
                 sha = (json.loads(r['after_sig']) or {}).get('hash')
-                added_by_hash[sha] = added_by_hash.get(sha, 0) + 1
+                if sha:
+                    added_by_hash[sha] = added_by_hash.get(sha, 0) + 1
         # Il limite tronca solo l'output: arricchisce soltanto gli elementi mostrati.
         items = rows[:limit]
         for row in items:
@@ -228,7 +249,7 @@ def pending(config, root=None, prefix=None, limit=100):
             row['after'] = json.loads(row.pop('after_sig'))
             if row['kind'] == 'added' and row['after']['kind'] == 'file':
                 sha = row['after']['hash']
-                candidates = deleted_by_hash.get(sha, [])
+                candidates = deleted_by_hash.get(sha, []) if sha else []
                 if len(candidates) == added_by_hash.get(sha, 0) == 1:
                     row['possible_rename_from'] = {'root': candidates[0]['root'], 'path': candidates[0]['path'], 'id': candidates[0]['id']}
             row['superseded_events'] = con.execute(
@@ -237,12 +258,19 @@ def pending(config, root=None, prefix=None, limit=100):
     finally:
         con.close()
 
-def review(config, ids, note):
+def review(config, ids, note, root=None, prefix=None):
     if not note.strip():
         raise ValueError('Indicare esito della revisione e note/fonti aggiornate')
+    by_filter = bool(root or prefix)
+    if bool(ids) == by_filter:
+        raise ValueError('Indicare gli ID oppure un filtro (--root, --prefix)')
     con = connect(Path(config['database']))
     try:
         con.execute('BEGIN IMMEDIATE')
+        if by_filter:
+            # Chiusura per filtro: stessi controlli evento per evento, nella stessa transazione.
+            ids = [r['id'] for r in con.execute("SELECT id,root,path FROM events WHERE status='pending' ORDER BY id")
+                   if matches(r, root, prefix)]
         for event_id in ids:
             row = con.execute('SELECT * FROM events WHERE id=?', (event_id,)).fetchone()
             if row is None or row['status'] != 'pending':
@@ -268,7 +296,7 @@ def review(config, ids, note):
         raise
     finally:
         con.close()
-    return {'reviewed': ids}
+    return {'reviewed': len(ids), 'root': root, 'prefix': prefix} if by_filter else {'reviewed': ids}
 
 LINK = re.compile(r'\]\((<[^>]+>|[^\)\n]+)\)')
 def slug(s):
@@ -277,12 +305,15 @@ def slug(s):
 
 def links(config):
     base = Path(config['desktop'])
+    skip = exclusions(config)
     issues, visited, queue = [], set(), [base/'AGENTS.md', base/'MAPPA.md', base/'MANUTENZIONE.md']
     while queue:
         path = queue.pop()
         if path in visited or not path.is_file() or path.suffix.lower() != '.md':
             continue
-        if 'Archivio' in path.parts or '.codex-tmp' in path.parts:
+        # Le pagine archiviate sono storiche; i percorsi esclusi non fanno parte della memoria.
+        rel = path.relative_to(base).as_posix()
+        if 'Archivio' in rel.split('/') or skip(rel):
             continue
         visited.add(path)
         text = path.read_text(encoding='utf-8-sig')
@@ -312,8 +343,10 @@ def main():
     parser.add_argument('--config', type=Path, default=DEFAULT_CONFIG)
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('scan'); p.add_argument('--root', action='append'); p.add_argument('--full', action='store_true')
-    p = sub.add_parser('pending'); p.add_argument('--root'); p.add_argument('--prefix'); p.add_argument('--limit', type=int, default=100)
-    p = sub.add_parser('review'); p.add_argument('ids', nargs='+', type=int); p.add_argument('--note', required=True)
+    p = sub.add_parser('pending'); p.add_argument('--root'); p.add_argument('--prefix'); p.add_argument('--depth', type=int)
+    p.add_argument('--limit', type=int, default=100)
+    p = sub.add_parser('review'); p.add_argument('ids', nargs='*', type=int); p.add_argument('--root'); p.add_argument('--prefix')
+    p.add_argument('--note', required=True)
     sub.add_parser('status'); sub.add_parser('links')
     args = parser.parse_args()
     config = load_config(args.config.resolve())
@@ -322,9 +355,9 @@ def main():
         out = scan(config, args.root, args.full)
         code = int(any(r['errors'] for r in out))
     elif args.command == 'pending':
-        out = pending(config, args.root, args.prefix, args.limit)
+        out = pending(config, args.root, args.prefix, args.limit, args.depth)
     elif args.command == 'review':
-        out = review(config, args.ids, args.note)
+        out = review(config, args.ids, args.note, args.root, args.prefix)
     elif args.command == 'links':
         out = links(config)
         code = int(bool(out['issues']))

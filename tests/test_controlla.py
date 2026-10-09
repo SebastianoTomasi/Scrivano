@@ -12,6 +12,15 @@ spec = importlib.util.spec_from_file_location('controlla', Path(__file__).resolv
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
+def offline(path):
+    # Simula un file solo nel cloud con l'attributo Windows offline.
+    if os.name!='nt': raise unittest.SkipTest('attributi Windows')
+    import ctypes; k=ctypes.windll.kernel32
+    if not k.SetFileAttributesW(str(path),k.GetFileAttributesW(str(path))|0x1000):
+        raise unittest.SkipTest('attributo offline non impostabile')
+
+def never(*args, **kwargs): raise AssertionError('file letto: lo avrebbe scaricato dal cloud')
+
 class DetectorTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -100,9 +109,57 @@ class DetectorTests(unittest.TestCase):
         p=self.put('old.md','unique'); self.scan(); p.rename(self.root/'new.md'); self.put('z.md','z'); self.scan()
         out=m.pending(self.config,limit=1)
         self.assertEqual((out['total_pending'],out['matched'],len(out['items'])),(3,3,1))
-        # Il candidato cancellato è oltre il limite ma resta nell'indice dei rinomini.
+        # Il candidato cancellato è fuori dal filtro ma resta nell'indice dei rinomini.
+        out=m.pending(self.config,prefix='new.md')
         self.assertEqual(out['items'][0]['possible_rename_from']['path'],'old.md')
         self.assertEqual(m.pending(self.config,prefix='z.md')['matched'],1)
+
+    def test_pending_shows_newest_first(self):
+        self.scan(); self.put('a.md','a'); self.scan(); self.put('b.md','b'); self.scan()
+        self.assertEqual([r['path'] for r in self.items()],['b.md','a.md'])
+        self.assertEqual([r['path'] for r in m.pending(self.config,limit=1)['items']],['b.md'])
+
+    def test_depth_filter_keeps_root_level(self):
+        self.scan(); self.put('top.md','t'); self.put('sub/deep.md','d'); self.scan()
+        self.assertEqual({r['path'] for r in m.pending(self.config,depth=1)['items']},{'top.md','sub'})
+        with self.assertRaises(ValueError): m.pending(self.config,depth=0)
+
+    def test_review_by_prefix(self):
+        self.scan(); self.put('Foto/1.jpg','1'); self.put('Foto/2.jpg','2'); self.put('x.md','x'); self.scan()
+        out=m.review(self.config,[],'foto censite',prefix='Foto')
+        self.assertEqual(out['reviewed'],3); self.assertEqual([r['path'] for r in self.items()],['x.md'])
+
+    def test_review_needs_ids_or_filter(self):
+        self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
+        for ids,prefix in (([],None),([event],'a.md')):
+            with self.assertRaises(ValueError): m.review(self.config,ids,'nota',prefix=prefix)
+
+    def test_review_by_filter_is_atomic(self):
+        self.scan(); self.put('Foto/1.jpg','1'); p=self.put('Foto/2.jpg','2'); self.scan(); p.write_text('changed')
+        with self.assertRaises(ValueError): m.review(self.config,[],'test',prefix='Foto')
+        self.assertEqual(len(self.items()),3)
+
+    def test_cloud_only_files_are_not_read(self):
+        p=self.put('video.mp4','contenuto'); offline(p)
+        with patch.object(m,'digest',side_effect=never): self.scan(); self.scan(full=True)
+        self.assertEqual(self.items(),[])
+
+    def test_dehydrated_file_is_not_a_change(self):
+        p=self.put('doc.pdf','contenuto'); self.scan(); offline(p)
+        with patch.object(m,'digest',side_effect=never): self.scan(full=True)
+        self.assertEqual(self.items(),[])
+
+    def test_review_does_not_download_cloud_files(self):
+        self.scan(); p=self.put('nuovo.pdf','x'); offline(p)
+        with patch.object(m,'digest',side_effect=never):
+            self.scan(); m.review(self.config,[self.items()[0]['id']],'censito')
+        self.assertEqual(self.items(),[])
+
+    def test_cloud_files_get_no_rename_suggestion(self):
+        # Senza impronta una cancellazione e un'aggiunta qualsiasi non sono un rinomino.
+        a=self.put('a.pdf','uno'); offline(a); self.scan(); a.unlink()
+        e=self.put('e.pdf','tutto diverso'); offline(e); self.scan()
+        self.assertTrue(all('possible_rename_from' not in r for r in self.items()))
 
     def test_exclusion_patterns_ignore_case(self):
         self.config['exclude_paths']=['Out/*']; self.config['exclude_dirs'].append('Cache'); self.scan()
@@ -175,5 +232,11 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(m.links(self.config)['issues'],[])
         self.put('note con spazi.md','# Altro')
         self.assertEqual(m.links(self.config)['issues'][0]['error'],'anchor')
+
+    def test_links_skip_archive_and_excluded(self):
+        self.config['exclude_dirs'].append('Bozze')
+        self.put('AGENTS.md','[Vecchio](Archivio/vecchio.md) [Bozza](Bozze/b.md)')
+        self.put('Archivio/vecchio.md','[rotto](manca.md)'); self.put('Bozze/b.md','[rotto](manca.md)')
+        self.assertEqual(m.links(self.config)['issues'],[])
 
 if __name__=='__main__': unittest.main()
