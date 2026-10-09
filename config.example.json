@@ -1,0 +1,12 @@
+{
+  "desktop": "C:/Users/utente/Desktop",
+  "database": ".stato/registro.sqlite",
+  "roots": [
+    {"id": "Desktop", "path": "C:/Users/utente/Desktop"},
+    {"id": "Code", "path": "C:/Users/utente/Documents/Code", "depth": 2},
+    {"id": "Downloads", "path": "C:/Users/utente/Downloads", "recursive": false}
+  ],
+  "exclude_dirs": [".git", ".venv", "venv", "node_modules", "__pycache__", ".stato", ".pytest_cache", ".cache", "dist", "build"],
+  "exclude_paths": [".claude/worktrees/*", "*/.claude/worktrees/*"],
+  "exclude_files": ["desktop.ini", "Thumbs.db", "*.pyc", ".env", ".env.*", "*.pem", "*.key", "id_rsa*", "id_ed25519*"]
+}
