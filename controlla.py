@@ -302,10 +302,6 @@ def links(config):
                     issues.append({'file': str(path), 'target': href, 'error': 'anchor'})
             if dest.is_relative_to(base) and dest.suffix.lower() == '.md':
                 queue.append(dest)
-        if path.name == 'AGENTS.md':
-            claude = path.with_name('CLAUDE.md')
-            if not claude.exists() or '@AGENTS.md' not in claude.read_text(encoding='utf-8-sig'):
-                issues.append({'file': str(path), 'error': 'CLAUDE.md import missing'})
     return {'checked': len(visited), 'issues': issues, 'visited': sorted(map(str, visited))}
 
 def main():

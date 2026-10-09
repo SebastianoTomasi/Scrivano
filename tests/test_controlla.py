@@ -169,7 +169,7 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(self.items(),[])
 
     def test_links_spaces_unicode_and_anchor(self):
-        self.put('AGENTS.md','[Mappa](MAPPA.md)'); self.put('CLAUDE.md','@AGENTS.md')
+        self.put('AGENTS.md','[Mappa](MAPPA.md)')
         self.put('MAPPA.md','[Nota](<note con spazi.md#perché>)')
         self.put('MANUTENZIONE.md','# Manutenzione'); self.put('note con spazi.md','# Perché')
         self.assertEqual(m.links(self.config)['issues'],[])

@@ -14,7 +14,7 @@ Usa Python 3.10+ e solo la libreria standard. Non invia dati in rete, non modifi
 | `python controlla.py pending --root Desktop --prefix Finanze --limit 30` | Filtra la coda; non elimina gli elementi omessi |
 | `python controlla.py review 12 13 --note 'esito della revisione'` | Chiude gli ID indicati dopo verifica del file corrente |
 | `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
-| `python controlla.py links` | Controlla link locali, ancore Markdown e import CLAUDE.md |
+| `python controlla.py links` | Controlla link locali e ancore Markdown |
 
 Gli ID sono esempi. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
