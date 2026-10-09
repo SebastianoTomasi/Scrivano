@@ -212,6 +212,12 @@ class DetectorTests(unittest.TestCase):
         with patch.object(m.os,'scandir',side_effect=old): result=self.scan()
         self.assertEqual((result[0]['errors'],self.items()),([],[]))
 
+    def test_example_config_skips_office_lock_files(self):
+        example=json.loads((Path(m.__file__).parent/'config.example.json').read_text(encoding='utf-8'))
+        self.config['exclude_files']=example['exclude_files']; self.scan()
+        self.put('~$Relazione.docx','lock'); self.put('.~lock.Bilancio.ods#','lock'); self.put('Relazione.docx','testo')
+        self.scan(); self.assertEqual([r['path'] for r in self.items()],['Relazione.docx'])
+
     def test_exclusions_and_hidden_instructions(self):
         self.scan(); self.put('node_modules/ignored.js','code'); self.put('.env','test')
         self.put('.claude/rules.md','instructions'); self.scan()
