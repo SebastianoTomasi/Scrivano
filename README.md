@@ -84,7 +84,7 @@ Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le
 
 | Comando | Effetto |
 | --- | --- |
-| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa |
+| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
 | `python riordina.py esegui piano.json --prova` | Controlla il piano senza spostare nulla |
 | `python riordina.py esegui piano.json` | Esegue il piano |
 | `python riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
@@ -100,9 +100,9 @@ Il piano è un JSON con la radice, le mosse e, se servono, le cartelle-contenito
 
 - Le mosse descrivono l'albero di partenza: origini e destinazioni non si ripetono, non si sovrappongono e restano dentro la radice. Le cartelle mancanti vengono create. Un cambio di sole maiuscole passa da un nome intermedio, in due piani.
 - Dopo le mosse, ogni cartella di `vuote` rimasta davvero vuota viene tolta; una con qualcosa dentro resta e compare in `cartelle_rimaste`.
-- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction; i collegamenti `.lnk` e `.url` sono file normali.
-- Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse già fatte e riprende.
-- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
+- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction, insieme a ciò che si raggiunge attraverso di loro; i collegamenti `.lnk` e `.url` sono file normali.
+- Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse che il giornale registra come fatte e riprende. Un'origine assente con la destinazione già occupata, senza traccia nel giornale, è un problema del piano.
+- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita: ogni piano ha il suo giornale, quindi una correzione successiva va in un piano nuovo, con un altro nome. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
 - `riordina.lock`, accanto al piano, impedisce due esecuzioni insieme. Se resta dopo un'interruzione, verifica lo stato della cartella e poi cancellalo.
 - L'esecuzione confronta il numero di file prima e dopo, contando anche l'interno di `.git` e simili, che l'inventario invece salta: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
 

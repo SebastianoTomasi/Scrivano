@@ -127,6 +127,22 @@ class PlanTests(Base):
         out,code=m.execute(self.plan(('link','X/link')))
         self.assertEqual((code,out['problemi'][0]['problema']),(1,'link simbolico o junction: da spostare a mano'))
 
+    def test_paths_through_links_are_rejected(self):
+        # Dietro una junction ci sono file e cartelle fuori dalla radice: niente mosse né rimozioni.
+        target=self.base/'fuori'; (target/'Sotto').mkdir(parents=True); (target/'x.txt').write_text('x')
+        junction(target,self.root/'link')
+        out,code=m.execute(self.plan(('link/x.txt','X/x.txt'),vuote=['link/Sotto']))
+        self.assertEqual((code,[p['problema'] for p in out['problemi']]),
+                         (1,['link simbolico o junction: da spostare a mano','non è una cartella da svuotare']))
+        self.assertTrue((target/'x.txt').exists() and (target/'Sotto').exists())
+
+    def test_missing_source_is_done_only_if_noted(self):
+        # Senza giornale, origine assente e destinazione occupata sono un errore del piano, non una mossa fatta.
+        self.put('Finanze/fattura.pdf')
+        out,code=m.execute(self.plan(('fattura.pdf','Finanze/fattura.pdf')),dry_run=True)
+        self.assertEqual((code,out['gia_fatte'],out['problemi'][0]['problema']),
+                         (1,0,'origine mancante e destinazione già occupata'))
+
     def test_undo_restores_and_removes_created_folders(self):
         self.put('a.txt'); self.put('Esistente/b.txt')
         plan=self.plan(('a.txt','Nuova/Sotto/a.txt'),('Esistente','Nuova/Esistente'))
