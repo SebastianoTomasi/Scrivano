@@ -212,7 +212,10 @@ def load_plan(path):
         if not isinstance(move, dict) or 'da' not in move or 'a' not in move:
             raise ValueError('Mossa non valida: servono "da" e "a"')
         moves.append((relative(move['da']), relative(move['a'])))
-    return root, moves
+    # Cartelle-contenitore da togliere se le mosse le lasciano vuote.
+    if not isinstance(plan.get('vuote', []), list):
+        raise ValueError('Piano non valido: "vuote" è un elenco di cartelle')
+    return root, moves, [relative(folder) for folder in plan.get('vuote', [])]
 
 def journal_path(plan_path):
     return plan_path.with_name(plan_path.stem + '.giornale.jsonl')
@@ -233,17 +236,17 @@ def status(root, src, dst):
         # Origine assente e destinazione presente: mossa già fatta in un'esecuzione interrotta.
         return (None, 'fatta') if has_dst else ('origine mancante', None)
     if is_link(os.stat(root / src, follow_symlinks=False)):
-        return 'link o junction: da spostare a mano', None
+        return 'link simbolico o junction: da spostare a mano', None
     for folder in ancestors(dst)[:-1]:
         if os.path.lexists(root / folder):
             info = os.stat(root / folder, follow_symlinks=False)
             if is_link(info):
-                return 'la destinazione passa da un link o una junction', None
+                return 'la destinazione passa da un link simbolico o una junction', None
             if not stat.S_ISDIR(info.st_mode):
                 return 'un file occupa il percorso di destinazione', None
     return None, 'da_fare'
 
-def check(root, moves):
+def check(root, moves, empties=()):
     # Il piano descrive l'albero originale: origini e destinazioni non si sovrappongono.
     keys = [(key(s), key(d)) for s, d in moves]
     sources, targets = Counter(s for s, _ in keys), Counter(d for _, d in keys)
@@ -252,6 +255,9 @@ def check(root, moves):
         state = None
         if sources[ks] > 1 or targets[kd] > 1:
             issue = 'origine o destinazione ripetuta nel piano'
+        elif ks == kd:
+            issue = ('origine e destinazione coincidono' if src == dst else
+                     'cambia solo maiuscole e minuscole: passa da un nome intermedio, in due piani')
         elif any(a in sources for a in ancestors(kd)):
             issue = "destinazione dentro un'origine del piano"
         elif any(a in targets for a in ancestors(ks)):
@@ -265,6 +271,11 @@ def check(root, moves):
         states.append(state)
         if issue:
             problems.append({'mossa': number, 'da': src, 'a': dst, 'problema': issue})
+    for folder in empties:
+        if os.path.lexists(root / folder):
+            info = os.stat(root / folder, follow_symlinks=False)
+            if is_link(info) or not stat.S_ISDIR(info.st_mode):
+                problems.append({'vuota': folder, 'problema': 'non è una cartella da svuotare'})
     return states, problems
 
 def missing_parents(root, rel):
@@ -312,13 +323,13 @@ def note(log, **entry):
     os.fsync(log.fileno())
 
 def execute(plan_path, dry_run=False):
-    root, moves = load_plan(plan_path)
-    states, problems = check(root, moves)
+    root, moves, empties = load_plan(plan_path)
+    states, problems = check(root, moves, empties)
     report = {'radice': str(root), 'mosse': len(moves), 'da_fare': states.count('da_fare'),
               'gia_fatte': states.count('fatta'), 'problemi': problems}
     if problems or dry_run:
         return report, int(bool(problems))
-    journal, done, error = journal_path(plan_path), 0, None
+    journal, done, error, removed, kept = journal_path(plan_path), 0, None, [], []
     with lock(plan_path.parent), open(journal, 'a', encoding='utf-8') as log:
         before = count_files(root)
         for (src, dst), state in zip(moves, states):
@@ -336,19 +347,46 @@ def execute(plan_path, dry_run=False):
             except OSError as exc:
                 error = {'da': src, 'a': dst, 'errore': str(exc)}
                 break
+        for folder in empties if error is None else ():
+            # Solo cartelle rimaste davvero vuote: una con qualcosa dentro resta e si segnala.
+            if not os.path.lexists(root / folder):
+                continue
+            with os.scandir(root / folder) as listing:
+                if next(listing, None) is not None:
+                    kept.append(folder)
+                    continue
+            try:
+                note(log, rimossa=folder)
+                os.rmdir(root / folder)
+                removed.append(folder)
+            except OSError as exc:
+                error = {'vuota': folder, 'errore': str(exc)}
+                break
         after = count_files(root)
-    report.update(eseguite=done, errore=error, conteggio={'prima': before, 'dopo': after}, giornale=str(journal))
+    report.update(eseguite=done, errore=error, cartelle_rimosse=removed, cartelle_rimaste=kept,
+                  conteggio={'prima': before, 'dopo': after}, giornale=str(journal))
     return report, int(bool(error) or before != after)
 
 def undo(plan_path):
-    root, _ = load_plan(plan_path)
+    root, _, _ = load_plan(plan_path)
     journal = journal_path(plan_path)
     if not journal.is_file():
         raise ValueError(f'Nessun giornale da annullare: {journal}')
     entries = [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines() if line.strip()]
-    restored, in_place, removed, conflicts, error = 0, 0, 0, [], None
+    restored, in_place, removed, recreated, conflicts, error = 0, 0, 0, 0, [], None
     with lock(plan_path.parent):
         for entry in reversed(entries):
+            if 'rimossa' in entry:
+                # Una cartella svuotata e tolta torna prima che i file vi rientrino.
+                if not os.path.lexists(root / entry['rimossa']):
+                    try:
+                        for folder in missing_parents(root, entry['rimossa']) + [entry['rimossa']]:
+                            os.mkdir(root / folder)
+                        recreated += 1
+                    except OSError as exc:
+                        error = {'vuota': entry['rimossa'], 'errore': str(exc)}
+                        break
+                continue
             if 'cartella' in entry:
                 try:
                     os.rmdir(root / entry['cartella'])
@@ -377,7 +415,8 @@ def undo(plan_path):
             # Giornale chiuso: una nuova esecuzione ne apre uno pulito.
             journal = journal.rename(journal.with_name(f'{journal.stem}.annullato-{time.strftime("%Y%m%d-%H%M%S")}.jsonl'))
     return ({'radice': str(root), 'ripristinate': restored, 'gia_al_posto': in_place, 'cartelle_rimosse': removed,
-             'conflitti': conflicts, 'errore': error, 'giornale': str(journal)}, int(bool(error or conflicts)))
+             'cartelle_ricreate': recreated, 'conflitti': conflicts, 'errore': error, 'giornale': str(journal)},
+            int(bool(error or conflicts)))
 
 def main():
     # PowerShell e percorsi Unicode: output UTF-8 anche con locale Windows legacy.

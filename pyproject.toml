@@ -1,7 +1,8 @@
 [project]
 name = "sistema-conoscenza"
 version = "0.1.0"
-description = "Rilevatore locale dei cambiamenti nei file, con coda di revisione per memorie Markdown mantenute da agenti"
+description = "Rilevatore locale dei cambiamenti nei file, con coda di revisione per archivi Markdown mantenuti da agenti"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
 dependencies = []

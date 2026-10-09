@@ -311,7 +311,7 @@ def links(config):
         path = queue.pop()
         if path in visited or not path.is_file() or path.suffix.lower() != '.md':
             continue
-        # Le pagine archiviate sono storiche; i percorsi esclusi non fanno parte della memoria.
+        # Le pagine in Archivio sono storiche; i percorsi esclusi sono fuori dall'archivio personale.
         rel = path.relative_to(base).as_posix()
         if 'Archivio' in rel.split('/') or skip(rel):
             continue

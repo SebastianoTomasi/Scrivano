@@ -1,12 +1,45 @@
 # SistemaConoscenza
 
-Strumenti per una memoria in Markdown mantenuta da agenti. `controlla.py` rileva i cambiamenti nei file e li tiene in una coda da revisionare, così le note derivate non restano indietro rispetto alle fonti. `riordina.py` fa l'inventario di una cartella ed esegue un piano di riordino approvato.
+Mette in ordine il Desktop e ne fa un archivio personale che il tuo agente, Claude Code o Codex, sa consultare e tenere aggiornato. Ogni cartella ha una guida che dice cosa contiene; un rilevatore annota i file che cambiano, così l'agente sa cosa rileggere.
 
-Usa Python 3.10+ e solo la libreria standard, senza inviare dati in rete. Le decisioni spettano all'agente: `controlla.py` non modifica i file osservati e non interpreta i cambiamenti, `riordina.py` esegue soltanto il piano che riceve.
+## Per cominciare
 
-L'installazione del sistema su un altro PC è in preparazione: decisioni e ordine dei lavori sono nel [progetto di installazione](docs/progetto-installazione.md).
+Serve Windows 11 con Claude Code o Codex. Se manca Python, lo installa l'agente.
 
-## Comandi del rilevatore
+Apri l'agente sul tuo Desktop, in modalità auto (Claude Code) o con accesso completo (Codex), e scrivigli *Installa il sistema di conoscenza da* seguito dall'indirizzo di questo repository.
+
+L'agente guarda cosa c'è sul Desktop, ti propone un'organizzazione per argomenti e la applica quando sei d'accordo. Se preferisci non spostare nulla, il sistema si installa sulle cartelle che hai già.
+
+## Uso quotidiano
+
+- Per le cose personali apri l'agente sul Desktop.
+- Lascia i file nuovi sul Desktop: l'agente propone dove metterli, al massimo una volta per sessione.
+- Chiedi quello che ti serve, per esempio "dov'è il contratto d'affitto?" o "quanto ho speso di luce quest'anno?": l'agente parte dalla mappa e dalle guide.
+- Quando apri l'agente, un rilevatore gli dice quali file sono cambiati dall'ultima volta. Non gira in background e non devi occupartene.
+
+Per aggiornare il sistema scrivi all'agente *aggiorna il sistema di conoscenza*.
+
+## Domande frequenti
+
+- **Cosa legge l'agente?** Quello che gli serve per orientarsi, tranne chiavi, `.env` e file di password, che ti segnala senza aprirli. Ciò che legge passa al fornitore del modello: Anthropic per Claude, OpenAI per Codex.
+- **E la memoria di Claude o Codex?** Resta com'è e ricorda come preferisci lavorare. L'archivio tiene ciò che si sa dei tuoi documenti: sta sul Desktop, lo leggi anche tu e lo usano entrambi gli agenti.
+- **Si può tornare indietro?** Sì: ogni spostamento è annotato e l'agente può annullarlo.
+- **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
+- **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
+- **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
+- **Disinstallare.** Cancella `Documenti\SistemaConoscenza`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md`, le `GUIDA.md` delle cartelle ed eventualmente `.codex-root`. Il riordino resta.
+
+## Per l'agente
+
+Se l'utente ti chiede di installare il sistema, segui [INSTALLA.md](./INSTALLA.md); per aggiornarlo, [AGGIORNA.md](./AGGIORNA.md).
+
+## Strumenti
+
+`controlla.py` rileva i cambiamenti nei file e li tiene in una coda da revisionare, così le note derivate non restano indietro rispetto alle fonti. `riordina.py` fa l'inventario di una cartella ed esegue un piano di riordino approvato. Usano Python 3.10+ e solo la libreria standard, senza inviare dati in rete. Le decisioni spettano all'agente: `controlla.py` non modifica i file osservati e non interpreta i cambiamenti, `riordina.py` esegue soltanto il piano che riceve.
+
+Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-installazione.md); i modelli delle pagine del Desktop e il catalogo dei domini in [modelli](./modelli/); le novità di ogni versione nel [CHANGELOG](./CHANGELOG.md).
+
+### Comandi del rilevatore
 
 | Comando | Effetto |
 | --- | --- |
@@ -22,18 +55,18 @@ L'installazione del sistema su un altro PC è in preparazione: decisioni e ordin
 
 Gli ID sono esempi. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
-## Configurazione
+### Configurazione
 
 Parti da [config.example.json](./config.example.json):
 
-- `desktop`: radice della memoria da cui parte `links`.
+- `desktop`: radice dell'archivio da cui parte `links`.
 - `database`: registro SQLite; se relativo, è risolto rispetto al file di configurazione.
 - `roots`: radici osservate, ognuna con `id` e `path`. `depth: N` osserva N livelli sotto la radice; `recursive: false` equivale a 1.
 - `exclude_dirs`, `exclude_paths`, `exclude_files`: nomi di cartella, percorsi relativi e nomi di file da saltare, con caratteri jolly.
 
 Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati e conserva i pendenti. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
 
-## Ciclo di revisione
+### Ciclo di revisione
 
 1. `scan` registra aggiunte, modifiche e cancellazioni, incluse le cartelle vuote. La prima scansione di una radice crea solo la base osservata e non dichiara letti i documenti.
 2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate.
@@ -42,7 +75,7 @@ Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente 
 
 Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le note di `review` restano nella tabella `events`.
 
-## Riordino
+### Riordino
 
 `riordina.py` sposta file e cartelle secondo un piano deciso dall'agente e approvato dall'utente.
 
@@ -53,24 +86,26 @@ Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le
 | `python riordina.py esegui piano.json` | Esegue il piano |
 | `python riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
 
-Il piano è un JSON con la radice e le mosse, in percorsi relativi alla radice:
+Il piano è un JSON con la radice, le mosse e, se servono, le cartelle-contenitore da togliere quando restano vuote. I percorsi sono relativi alla radice:
 
 ```json
 {"radice": "C:/Users/utente/Desktop",
  "mosse": [{"da": "fattura.pdf", "a": "Finanze/fattura.pdf"},
-           {"da": "Foto mare", "a": "Personale/Foto mare"}]}
+           {"da": "Nuova cartella/Foto mare", "a": "Personale/Foto mare"}],
+ "vuote": ["Nuova cartella"]}
 ```
 
-- Le mosse descrivono l'albero di partenza: origini e destinazioni non si ripetono, non si sovrappongono e restano dentro la radice. Le cartelle mancanti vengono create.
-- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link e junction.
+- Le mosse descrivono l'albero di partenza: origini e destinazioni non si ripetono, non si sovrappongono e restano dentro la radice. Le cartelle mancanti vengono create. Un cambio di sole maiuscole passa da un nome intermedio, in due piani.
+- Dopo le mosse, ogni cartella di `vuote` rimasta davvero vuota viene tolta; una con qualcosa dentro resta e compare in `cartelle_rimaste`.
+- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction; i collegamenti `.lnk` e `.url` sono file normali.
 - Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse già fatte e riprende.
-- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita. `annulla` ripercorre il giornale al contrario, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
+- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
 - `riordina.lock`, accanto al piano, impedisce due esecuzioni insieme. Se resta dopo un'interruzione, verifica lo stato della cartella e poi cancellalo.
-- L'esecuzione confronta il numero di file prima e dopo: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
+- L'esecuzione confronta il numero di file prima e dopo, contando anche l'interno di `.git` e simili, che l'inventario invece salta: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
 
 Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento diventa una cancellazione più un'aggiunta da revisionare.
 
-## Limiti e recupero
+### Limiti e recupero
 
 | Caso | Comportamento / azione |
 | --- | --- |
@@ -84,10 +119,17 @@ Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento d
 
 I comandi restituiscono codice non zero in caso di errore; `links` anche quando trova collegamenti rotti, `riordina.py` anche quando il piano ha problemi o il conteggio dei file cambia. Il controllo link parte da `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` nella radice `desktop` e segue i Markdown locali collegati, saltando le cartelle `Archivio` e i percorsi esclusi dalla configurazione. Non trova pagine isolate né verifica URL remoti o contenuti.
 
-## Test
+### Test
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-I test lavorano solo su cartelle temporanee.
+I test lavorano solo su cartelle temporanee. Per provare l'installazione completa, `tests/desktop_finto.py` genera un Desktop disordinato finto e poi verifica il risultato:
+
+```bash
+python tests/desktop_finto.py genera C:/Prove/Uno --strumento .
+python tests/desktop_finto.py verifica C:/Prove/Uno
+```
+
+Poi chiedi all'agente di seguire `INSTALLA.md` in modalità prova, indicandogli `C:/Prove/Uno/Desktop` come Desktop e `C:/Prove/Uno/Documenti/SistemaConoscenza` come strumento.

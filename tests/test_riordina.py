@@ -33,9 +33,9 @@ class Base(unittest.TestCase):
         self.state=self.base/'stato'; self.state.mkdir()
     def put(self, name, body='x'):
         p=self.root/name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(body,encoding='utf-8'); return p
-    def plan(self, *moves):
+    def plan(self, *moves, vuote=()):
         p=self.state/'piano.json'
-        p.write_text(json.dumps({'radice':str(self.root),'mosse':[{'da':a,'a':b} for a,b in moves]}),encoding='utf-8')
+        p.write_text(json.dumps({'radice':str(self.root),'mosse':[{'da':a,'a':b} for a,b in moves],'vuote':list(vuote)}),encoding='utf-8')
         return p
     def exists(self, name): return os.path.lexists(self.root/name)
 
@@ -91,6 +91,11 @@ class PlanTests(Base):
             out,code=m.execute(self.plan(*moves)); self.assertEqual(code,1,moves); self.assertTrue(out['problemi'])
         self.assertTrue(self.exists('A/x.txt') and self.exists('y.txt'))
 
+    def test_case_only_rename_needs_two_plans(self):
+        self.put('foto/a.jpg')
+        out,code=m.execute(self.plan(('foto','Foto')))
+        self.assertEqual(code,1); self.assertIn('maiuscole',out['problemi'][0]['problema'])
+
     def test_accents_and_brackets(self):
         self.put('Foto [2019] Città.jpg')
         out,code=m.execute(self.plan(('Foto [2019] Città.jpg','Personale/Foto [2019] Città.jpg')))
@@ -120,7 +125,7 @@ class PlanTests(Base):
     def test_links_are_not_moved(self):
         target=self.base/'fuori'; target.mkdir(); junction(target,self.root/'link')
         out,code=m.execute(self.plan(('link','X/link')))
-        self.assertEqual((code,out['problemi'][0]['problema']),(1,'link o junction: da spostare a mano'))
+        self.assertEqual((code,out['problemi'][0]['problema']),(1,'link simbolico o junction: da spostare a mano'))
 
     def test_undo_restores_and_removes_created_folders(self):
         self.put('a.txt'); self.put('Esistente/b.txt')
@@ -140,6 +145,22 @@ class PlanTests(Base):
         m.execute(plan); out,code=m.undo(plan)
         self.assertEqual((code,out['ripristinate'],out['gia_al_posto']),(0,2,1))
         self.assertTrue(self.exists('a.txt') and self.exists('b.txt')); self.assertFalse(self.exists('X'))
+
+    def test_emptied_containers_are_removed(self):
+        self.put('Nuova cartella/a.txt'); self.put('Varie/b.txt'); self.put('Varie/c.txt')
+        out,code=m.execute(self.plan(('Nuova cartella/a.txt','X/a.txt'),('Varie/b.txt','X/b.txt'),vuote=['Nuova cartella','Varie']))
+        self.assertEqual((code,out['cartelle_rimosse'],out['cartelle_rimaste']),(0,['Nuova cartella'],['Varie']))
+        self.assertFalse(self.exists('Nuova cartella')); self.assertTrue(self.exists('Varie/c.txt'))
+
+    def test_undo_recreates_removed_containers(self):
+        self.put('Nuova cartella/a.txt'); plan=self.plan(('Nuova cartella/a.txt','X/a.txt'),vuote=['Nuova cartella'])
+        m.execute(plan); out,code=m.undo(plan)
+        self.assertEqual((code,out['cartelle_ricreate'],out['ripristinate']),(0,1,1))
+        self.assertTrue(self.exists('Nuova cartella/a.txt')); self.assertFalse(self.exists('X'))
+
+    def test_only_folders_can_be_emptied(self):
+        self.put('a.txt'); out,code=m.execute(self.plan(vuote=['a.txt']))
+        self.assertEqual((code,out['problemi'][0]['problema']),(1,'non è una cartella da svuotare'))
 
     def test_undo_reports_conflicts(self):
         self.put('a.txt'); self.put('b.txt'); plan=self.plan(('a.txt','X/a.txt'),('b.txt','X/b.txt'))
