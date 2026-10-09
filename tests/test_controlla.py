@@ -1,5 +1,5 @@
 import importlib.util
-from contextlib import closing
+from contextlib import closing, contextmanager
 import json
 import os
 from pathlib import Path
@@ -20,6 +20,15 @@ def offline(path):
         raise unittest.SkipTest('attributo offline non impostabile')
 
 def never(*args, **kwargs): raise AssertionError('file letto: lo avrebbe scaricato dal cloud')
+
+def junction(target, link):
+    try:
+        if os.name=='nt':
+            import _winapi; _winapi.CreateJunction(str(target),str(link))
+        else:
+            os.symlink(target,link)
+    except OSError as exc:
+        raise unittest.SkipTest(f'link non creabile: {exc}')
 
 class DetectorTests(unittest.TestCase):
     def setUp(self):
@@ -113,6 +122,11 @@ class DetectorTests(unittest.TestCase):
         out=m.pending(self.config,prefix='new.md')
         self.assertEqual(out['items'][0]['possible_rename_from']['path'],'old.md')
         self.assertEqual(m.pending(self.config,prefix='z.md')['matched'],1)
+        with self.assertRaises(ValueError): m.pending(self.config,limit=-1)
+
+    def test_pending_items_carry_only_useful_fields(self):
+        self.scan(); self.put('a.md','a'); self.scan()
+        self.assertEqual(set(self.items()[0]),{'id','root','path','kind','created','before','after','superseded_events'})
 
     def test_pending_shows_newest_first(self):
         self.scan(); self.put('a.md','a'); self.scan(); self.put('b.md','b'); self.scan()
@@ -128,6 +142,21 @@ class DetectorTests(unittest.TestCase):
         self.scan(); self.put('Foto/1.jpg','1'); self.put('Foto/2.jpg','2'); self.put('x.md','x'); self.scan()
         out=m.review(self.config,[],'foto censite',prefix='Foto')
         self.assertEqual(out['reviewed'],3); self.assertEqual([r['path'] for r in self.items()],['x.md'])
+
+    def test_prefix_accepts_windows_separators(self):
+        self.scan(); self.put('Foto/Mare/1.jpg','1'); self.put('Fotografie.md','x'); self.scan()
+        self.assertEqual(m.pending(self.config,prefix='Foto/')['matched'],3)
+        self.assertEqual(m.pending(self.config,prefix='Foto\\Mare')['matched'],2)
+        self.assertEqual(m.review(self.config,[],'foto censite',prefix='Foto\\')['reviewed'],3)
+        self.assertEqual([r['path'] for r in self.items()],['Fotografie.md'])
+
+    def test_repeated_id_is_reviewed_once(self):
+        self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
+        self.assertEqual(m.review(self.config,[event,event],'letto')['reviewed'],[event])
+        self.assertEqual(self.items(),[])
+
+    def test_unknown_root_is_named(self):
+        with self.assertRaisesRegex(ValueError,'Altra'): m.scan(self.config,['test','Altra'])
 
     def test_review_needs_ids_or_filter(self):
         self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
@@ -168,15 +197,20 @@ class DetectorTests(unittest.TestCase):
 
     def test_links_and_junctions_are_not_followed(self):
         target=self.base/'target'; target.mkdir(); (target/'inside.md').write_text('x',encoding='utf-8')
-        self.scan()
-        try:
-            if os.name=='nt':
-                import _winapi; _winapi.CreateJunction(str(target),str(self.root/'link'))
-            else:
-                os.symlink(target,self.root/'link')
-        except OSError as exc:
-            self.skipTest(f'link non creabile: {exc}')
+        self.scan(); junction(target,self.root/'link')
         result=self.scan(); self.assertEqual(result[0]['errors'],[]); self.assertEqual(self.items(),[])
+
+    def test_junctions_without_direntry_support(self):
+        # Python 3.10 e 3.11: DirEntry non ha is_junction, eppure la junction resta fuori senza errori.
+        target=self.base/'target'; target.mkdir(); self.scan(); junction(target,self.root/'link')
+        real=m.os.scandir
+        class Old:
+            def __init__(self,e): self.name,self.path,self.is_symlink=e.name,e.path,e.is_symlink
+        @contextmanager
+        def old(path):
+            with real(path) as listing: yield [Old(e) for e in listing]
+        with patch.object(m.os,'scandir',side_effect=old): result=self.scan()
+        self.assertEqual((result[0]['errors'],self.items()),([],[]))
 
     def test_exclusions_and_hidden_instructions(self):
         self.scan(); self.put('node_modules/ignored.js','code'); self.put('.env','test')
@@ -236,7 +270,33 @@ class DetectorTests(unittest.TestCase):
     def test_links_skip_archive_and_excluded(self):
         self.config['exclude_dirs'].append('Bozze')
         self.put('AGENTS.md','[Vecchio](Archivio/vecchio.md) [Bozza](Bozze/b.md)')
+        self.put('MAPPA.md','# Mappa'); self.put('MANUTENZIONE.md','# Manutenzione')
         self.put('Archivio/vecchio.md','[rotto](manca.md)'); self.put('Bozze/b.md','[rotto](manca.md)')
         self.assertEqual(m.links(self.config)['issues'],[])
+
+    def test_links_report_missing_start_pages(self):
+        self.put('AGENTS.md','[Mappa](MAPPA.md)'); self.put('MAPPA.md','# Mappa')
+        self.assertEqual(m.links(self.config)['issues'],
+                         [{'file':str(self.root.resolve()),'target':'MANUTENZIONE.md','error':'missing'}])
+
+    def test_links_survive_unreadable_pages_and_ignore_code(self):
+        self.put('AGENTS.md','[Mappa](MAPPA.md) [Esempio](MANUTENZIONE.md#esempio)')
+        (self.root/'MAPPA.md').write_bytes(b'\x81\x82 non UTF-8')
+        self.put('MANUTENZIONE.md','# Manutenzione\n```powershell\n# esempio\n```\n')
+        found={(Path(i['file']).name,i['error']) for i in m.links(self.config)['issues']}
+        self.assertEqual(found,{('MAPPA.md','unreadable'),('AGENTS.md','anchor')})
+
+    def test_config_paths_are_relative_to_the_file(self):
+        folder=self.base/'istanza'; folder.mkdir(); path=folder/'config.json'
+        path.write_text(json.dumps({'desktop':'../files','roots':[{'id':'test','path':'../files'}]}),encoding='utf-8')
+        config=m.load_config(path)
+        self.assertEqual((config['desktop'],config['roots'][0]['path']),(str(self.root.resolve()),)*2)
+        self.assertEqual(config['database'],str(folder/'.stato/registro.sqlite'))
+
+    def test_config_without_roots_is_rejected(self):
+        path=self.base/'config.json'
+        for config in ({},{'roots':[{'id':'x'}]},[]):
+            path.write_text(json.dumps(config),encoding='utf-8')
+            with self.assertRaisesRegex(ValueError,'roots'): m.load_config(path)
 
 if __name__=='__main__': unittest.main()

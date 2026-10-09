@@ -53,16 +53,19 @@ Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-inst
 | `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
 | `python controlla.py links` | Controlla link locali e ancore Markdown |
 
-Gli ID sono esempi. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
+Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
 ### Configurazione
 
-Parti da [config.example.json](./config.example.json):
+Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione.
 
 - `desktop`: radice dell'archivio da cui parte `links`.
-- `database`: registro SQLite; se relativo, è risolto rispetto al file di configurazione.
+- `database`: registro SQLite, di norma `.stato/registro.sqlite`.
 - `roots`: radici osservate, ognuna con `id` e `path`. `depth: N` osserva N livelli sotto la radice; `recursive: false` equivale a 1.
-- `exclude_dirs`, `exclude_paths`, `exclude_files`: nomi di cartella, percorsi relativi e nomi di file da saltare, con caratteri jolly.
+- `exclude_dirs`: nomi esatti di cartelle (o file) da saltare a qualsiasi livello.
+- `exclude_paths`: percorsi relativi a ciascuna radice; `exclude_files`: nomi di file. Entrambi accettano i caratteri jolly `*` e `?`.
+
+Le esclusioni non distinguono maiuscole e minuscole.
 
 Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati e conserva i pendenti. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
 
@@ -112,12 +115,12 @@ Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento d
 | Dimensione e timestamp invariati | La scansione veloce può perdere l'edit; usa `--full` se sospetto |
 | File solo nel cloud (OneDrive) | Confrontati su dimensione e data senza leggerli, quindi senza scaricarli; niente suggerimenti di rinomina |
 | File creato e cancellato tra scansioni | Non osservabile; il registro non è un backup né una cronologia dei contenuti |
-| Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate |
+| Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate. Finché l'errore resta, `review` rifiuta gli eventi di quella radice: correggi la causa o escludi il percorso |
 | Eccezione o interruzione prima del commit | Annulla la transazione; ripeti la scansione |
 | Scansioni/revisioni concorrenti | Scritture serializzate; in caso di lock oltre 15 secondi, riprova |
 | Autore o significato di una modifica | Non rilevati dallo strumento |
 
-I comandi restituiscono codice non zero in caso di errore; `links` anche quando trova collegamenti rotti, `riordina.py` anche quando il piano ha problemi o il conteggio dei file cambia. Il controllo link parte da `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` nella radice `desktop` e segue i Markdown locali collegati, saltando le cartelle `Archivio` e i percorsi esclusi dalla configurazione. Non trova pagine isolate né verifica URL remoti o contenuti.
+I comandi restituiscono codice non zero in caso di errore; `scan` anche quando una radice ha errori, `links` anche quando trova collegamenti rotti, `riordina.py` anche quando il piano ha problemi, il conteggio dei file cambia o l'inventario non legge qualcosa. Il controllo link parte da `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` nella radice `desktop`, segnala quelle mancanti e segue i Markdown locali collegati, saltando le cartelle `Archivio`, i percorsi esclusi dalla configurazione e i blocchi di codice. Non trova pagine isolate né verifica URL remoti o contenuti.
 
 ### Test
 
