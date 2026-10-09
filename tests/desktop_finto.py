@@ -142,7 +142,8 @@ def verifica(cartella, strumento=None):
 
     tutte = [p for p in desktop.rglob('*.md')]
     mancanti = [p for p in PAGINE if not (desktop / p).is_file()]
-    # Un solo AGENTS.md, nella radice; con un CLAUDE.md Claude Code leggerebbe quello al suo posto.
+    # Il Desktop finto parte senza istruzioni e l'installazione aggiunge solo l'AGENTS.md della radice:
+    # qualsiasi altro AGENTS.md o CLAUDE.md l'ha creato l'agente, e un CLAUDE.md farebbe ignorare AGENTS.md.
     altre = [p.relative_to(desktop).as_posix() for p in desktop.rglob('*')
              if (p.name == 'AGENTS.md' and p.parent != desktop) or p.name in ('CLAUDE.md', 'CLAUDE.local.md')]
     sistema = [desktop / p for p in PAGINE if (desktop / p).is_file()] + list(desktop.rglob('GUIDA.md'))

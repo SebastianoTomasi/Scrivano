@@ -34,7 +34,7 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 La fa l'agente seguendo `INSTALLA.md`, a cui rimanda la parte del README dedicata all'agente.
 
 1. **Ingresso.** L'utente apre l'agente sul Desktop e scrive "installa Scrivano da \<url\>". Se l'agente trova un'installazione esistente, passa all'aggiornamento; altrimenti scarica il repository in Documenti.
-2. **Controlli.** Python, percorso reale del Desktop, eventuali `CLAUDE.md` o `CLAUDE.local.md` nel Desktop o più in alto: farebbero ignorare `AGENTS.md` a Claude Code, che lo legge dalla versione 2.1.277.
+2. **Controlli.** Python, percorso reale del Desktop, eventuali `CLAUDE.md`, `CLAUDE.local.md` o `.claude\CLAUDE.md` nel Desktop o più in alto: farebbero ignorare `AGENTS.md` a Claude Code, che lo legge dalla versione 2.1.277.
 3. **Analisi.** `riordina.py inventario` riassume il Desktop. L'agente legge quello che gli serve; chiavi, `.env` e password le segnala senza leggerle né spostarle.
 4. **Proposta.** Domini dalla tassonomia di riferimento, adattata al materiale. Poche domande concrete, tante quante richiede il disordine. Livello consigliato: completo, leggero (solo file sparsi e collegamenti) o nessuno (domini e mappe sulle cartelle esistenti). L'utente approva il riassunto, non l'elenco dettagliato.
 5. **Riordino.** `riordina.py esegui` sul piano. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella; le cartelle-contenitore anonime ("Nuova cartella") si svuotano solo con approvazione e, rimaste vuote, si tolgono; i collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide qui: dopo restano fermi, e uno con un ambiente virtuale resta dov'è.
@@ -68,7 +68,7 @@ I domini si scelgono dall'oggetto delle domande, non dal tipo di file o dal cont
 
 ## Aggiornamento e disinstallazione
 
-- "Aggiorna Scrivano": l'agente segue `AGGIORNA.md`. Aggiorna il repository (`git pull`, oppure lo zip lasciando `config.json` e `.stato/`), legge nel CHANGELOG le voci successive alla data dei modelli scritta in «Questa istanza» e porta le modifiche nelle copie del Desktop, dalla voce più vecchia, rispettando gli adattamenti locali. La data fa da versione, quindi il CHANGELOG ha una sola voce per data.
+- "Aggiorna Scrivano": l'agente segue `AGGIORNA.md`. Aggiorna il repository (`git pull`, oppure lo zip lasciando `config.json` e `.stato/`), legge nel CHANGELOG le voci dalla data dei modelli scritta in «Questa istanza» in poi, compresa quella, e porta le modifiche nelle copie del Desktop, dalla voce più vecchia, rispettando gli adattamenti locali. La data fa da versione: il CHANGELOG ha una sola voce per data, con azioni che si possono ripetere.
 - La disinstallazione è descritta nel README: si cancellano la cartella in Documenti, le pagine di sistema del Desktop e l'eventuale configurazione di Codex. Il riordino e le note restano.
 
 ## Collaudo

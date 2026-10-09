@@ -29,7 +29,7 @@ Una nota deve rendere chiari **tema, stato noto, fonte/data e questioni aperte**
 | `CHANGELOG.md` | Transizioni che spiegano lo stato corrente | La storia aiuta a capire una decisione |
 | `README.md` | Uso, configurazione e limiti di uno strumento | Esiste uno strumento da usare o mantenere |
 
-Claude Code e Codex leggono `AGENTS.md` direttamente. Niente `CLAUDE.md` o `CLAUDE.local.md` nel Desktop o più in alto: Claude Code leggerebbe quelli al posto di `AGENTS.md`. Le guide sono file normali raggiunti dai link: Codex non carica gli `AGENTS.md` sotto la cartella di avvio e Claude li caricherebbe solo leggendo file lì dentro, mentre un link funziona allo stesso modo per entrambi. Con Codex, `.codex-root` segna il Desktop come radice di progetto (`project_root_markers` in `~/.codex/config.toml`): una sessione aperta in una sottocartella legge comunque l'`AGENTS.md` della radice, tranne dentro un repository, che ha le sue istruzioni.
+Claude Code e Codex leggono `AGENTS.md` direttamente. Niente `CLAUDE.md`, `CLAUDE.local.md` o `.claude\CLAUDE.md` nel Desktop o più in alto: Claude Code leggerebbe quelli al posto di `AGENTS.md`. Le guide sono file normali raggiunti dai link: Codex non carica gli `AGENTS.md` sotto la cartella di avvio e Claude li caricherebbe solo leggendo file lì dentro, mentre un link funziona allo stesso modo per entrambi. Con Codex, `.codex-root` segna il Desktop come radice di progetto (`project_root_markers` in `~/.codex/config.toml`): una sessione aperta in una sottocartella legge comunque l'`AGENTS.md` della radice, tranne dentro un repository, che ha le sue istruzioni.
 
 - Scrivi la regola una volta, nella sede competente; altrove rimanda. Usa verbi operativi e specifica quando un'azione serve.
 - Mantieni selettivi gli ingressi di guide e mappe: collegamenti utili, non inventari completi né copie dello stato corrente.
@@ -63,7 +63,7 @@ python "{{strumento}}/controlla.py" review --root Desktop --prefix Personale/Fot
 
 Per spostare file dopo il sì dell'utente, per esempio quelli nuovi della radice, scrivi un piano piccolo in `{{strumento}}/.stato/`, con un nome nuovo, ed eseguilo con `python "{{strumento}}/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle. Lì piano e giornale restano fuori dalla coda.
 
-Se la radice ha errori o il file è cambiato, correggi il problema, ripeti la scansione e riesamina. Un errore che non si risolve, come un file sempre bloccato, si esclude in `config.json`. Non svuotare il registro per aggirare un conflitto. Una scansione parziale va dichiarata; una interrotta non dimostra assenza di modifiche. Comandi e limiti nel [README dello strumento](<{{strumento}}/README.md>).
+Se la radice ha errori o il file è cambiato, correggi il problema, ripeti la scansione e riesamina. Un errore che non si risolve, come un file sempre bloccato, si esclude in `config.json`; gli eventi di un percorso escluso si chiudono con una nota, senza ricontrollo. Non svuotare il registro per aggirare un conflitto. Una scansione parziale va dichiarata; una interrotta non dimostra assenza di modifiche. Comandi e limiti nel [README dello strumento](<{{strumento}}/README.md>).
 
 ## Copertura del rilevatore
 
