@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 
@@ -147,6 +148,8 @@ class DetectorTests(unittest.TestCase):
         self.scan(); self.put('Foto/Mare/1.jpg','1'); self.put('Fotografie.md','x'); self.scan()
         self.assertEqual(m.pending(self.config,prefix='Foto/')['matched'],3)
         self.assertEqual(m.pending(self.config,prefix='Foto\\Mare')['matched'],2)
+        self.assertEqual(m.pending(self.config,prefix='/Foto')['matched'],3)
+        if os.name=='nt': self.assertEqual(m.pending(self.config,prefix='foto/mare')['matched'],2)
         self.assertEqual(m.review(self.config,[],'foto censite',prefix='Foto\\')['reviewed'],3)
         self.assertEqual([r['path'] for r in self.items()],['Fotografie.md'])
 
@@ -157,6 +160,26 @@ class DetectorTests(unittest.TestCase):
 
     def test_unknown_root_is_named(self):
         with self.assertRaisesRegex(ValueError,'Altra'): m.scan(self.config,['test','Altra'])
+        with self.assertRaisesRegex(ValueError,'Altra'): m.pending(self.config,root='Altra')
+        with self.assertRaisesRegex(ValueError,'Altra'): m.review(self.config,[],'nota',root='Altra')
+
+    def test_events_out_of_coverage_can_be_reviewed(self):
+        # Dopo un'esclusione o con una profondità minore il percorso non si osserva più: si chiude senza ricontrollo.
+        self.scan(); lock=self.put('~$Relazione.docx','lock'); self.put('a/b/c.md','deep'); self.scan()
+        ids=[r['id'] for r in self.items()]
+        self.config['exclude_files'].append('~$*'); self.config['roots'][0]['depth']=2
+        lock.unlink(); self.put('a/b/c.md','cambiato'); self.scan()
+        self.assertEqual(m.review(self.config,ids,'fuori copertura')['reviewed'],ids); self.assertEqual(self.items(),[])
+
+    def test_status_lists_root_errors(self):
+        self.put('a.md','a'); self.scan(); self.root.rename(self.base/'altrove'); self.scan()
+        self.assertTrue(m.status(self.config)['roots'][0]['errors'][0]['error'])
+
+    def test_works_without_windows_stat_constants(self):
+        # Fuori da Windows il modulo stat non ha le costanti IO_REPARSE_TAG_*.
+        fake=types.SimpleNamespace(**{k:getattr(m.stat,k) for k in dir(m.stat) if not k.startswith('IO_REPARSE_TAG')})
+        self.put('a/b.md','b')
+        with patch.object(m,'stat',fake): self.assertEqual(self.scan()[0]['errors'],[])
 
     def test_review_needs_ids_or_filter(self):
         self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
@@ -299,10 +322,11 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual((config['desktop'],config['roots'][0]['path']),(str(self.root.resolve()),)*2)
         self.assertEqual(config['database'],str(folder/'.stato/registro.sqlite'))
 
-    def test_config_without_roots_is_rejected(self):
-        path=self.base/'config.json'
-        for config in ({},{'roots':[{'id':'x'}]},[]):
+    def test_invalid_config_is_rejected(self):
+        path=self.base/'config.json'; roots=[{'id':'x','path':'.'}]
+        for config in ({},[],{'roots':[{'id':'x'}]},{'roots':[{'id':'x','path':None}]},
+                       {'roots':roots,'desktop':None},{'roots':roots,'database':''}):
             path.write_text(json.dumps(config),encoding='utf-8')
-            with self.assertRaisesRegex(ValueError,'roots'): m.load_config(path)
+            with self.assertRaises(ValueError,msg=config): m.load_config(path)
 
 if __name__=='__main__': unittest.main()

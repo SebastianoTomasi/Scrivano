@@ -53,7 +53,7 @@ Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-inst
 | `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
 | `python controlla.py links` | Controlla link locali e ancore Markdown |
 
-Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
+Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows non distingue maiuscole e minuscole. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
 ### Configurazione
 
@@ -62,19 +62,20 @@ Parti da [config.example.json](./config.example.json). I percorsi relativi sono 
 - `desktop`: radice dell'archivio da cui parte `links`.
 - `database`: registro SQLite, di norma `.stato/registro.sqlite`.
 - `roots`: radici osservate, ognuna con `id` e `path`. `depth: N` osserva N livelli sotto la radice; `recursive: false` equivale a 1.
-- `exclude_dirs`: nomi esatti di cartelle (o file) da saltare a qualsiasi livello.
-- `exclude_paths`: percorsi relativi a ciascuna radice; `exclude_files`: nomi di file. Entrambi accettano i caratteri jolly `*` e `?`.
+- `exclude_dirs`: nomi esatti da saltare a qualsiasi livello, di cartelle o di file.
+- `exclude_files`: nomi con i caratteri jolly `*` e `?`, confrontati con l'ultima parte di ogni percorso: valgono anche per le cartelle, quindi `*passw*` salta pure una cartella `Password`.
+- `exclude_paths`: percorsi relativi a ciascuna radice, con gli stessi caratteri jolly.
 
 Le esclusioni non distinguono maiuscole e minuscole.
 
-Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati e conserva i pendenti. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
+Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati; i loro eventi pendenti restano, e `review` li chiude senza ricontrollare il file. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
 
 ### Ciclo di revisione
 
 1. `scan` registra aggiunte, modifiche e cancellazioni, incluse le cartelle vuote. La prima scansione di una radice crea solo la base osservata e non dichiara letti i documenti.
 2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate.
 3. L'agente legge i file, aggiorna le note e riesegue `scan`: anche le note modificate generano eventi.
-4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla.
+4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla. Gli eventi di percorsi non più osservati (esclusi, oltre la profondità o di una radice tolta dalla configurazione) si chiudono senza ricontrollo.
 
 Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le note di `review` restano nella tabella `events`.
 
