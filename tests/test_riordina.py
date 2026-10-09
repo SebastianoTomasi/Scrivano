@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 
@@ -63,6 +64,12 @@ class InventoryTests(Base):
         target=self.base/'fuori'; target.mkdir(); (target/'x.txt').write_text('x'); junction(target,self.root/'link')
         out=m.inventory(self.root)
         self.assertEqual((out['link'],out['totale']['file']),(['link'],0))
+
+    def test_works_without_windows_stat_constants(self):
+        # Fuori da Windows il modulo stat non ha le costanti IO_REPARSE_TAG_*.
+        fake=types.SimpleNamespace(**{k:getattr(m.stat,k) for k in dir(m.stat) if not k.startswith('IO_REPARSE_TAG')})
+        self.put('A/b.txt')
+        with patch.object(m,'stat',fake): self.assertEqual(m.inventory(self.root)['totale']['file'],1)
 
 class PlanTests(Base):
     def test_moves_and_creates_folders(self):
@@ -173,6 +180,22 @@ class PlanTests(Base):
         m.execute(plan); out,code=m.undo(plan)
         self.assertEqual((code,out['cartelle_ricreate'],out['ripristinate']),(0,1,1))
         self.assertTrue(self.exists('Nuova cartella/a.txt')); self.assertFalse(self.exists('X'))
+
+    def test_unreadable_container_is_reported(self):
+        self.put('Nuova cartella/a.txt'); plan=self.plan(('Nuova cartella/a.txt','X/a.txt'),vuote=['Nuova cartella'])
+        real=m.os.scandir
+        def denied(path):
+            if Path(path).name=='Nuova cartella': raise PermissionError('accesso negato')
+            return real(path)
+        with patch.object(m.os,'scandir',side_effect=denied): out,code=m.execute(plan)
+        self.assertEqual((code,out['eseguite'],out['errore']['vuota']),(1,1,'Nuova cartella'))
+        self.assertTrue(self.exists('Nuova cartella') and self.exists('X/a.txt'))
+
+    def test_unreadable_journal_is_named(self):
+        self.put('a.txt'); plan=self.plan(('a.txt','X/a.txt'))
+        (self.state/'piano.giornale.jsonl').write_text('{"da": "a.txt", "a": "X/a.t',encoding='utf-8')
+        for run in (lambda: m.execute(plan,dry_run=True),lambda: m.undo(plan)):
+            with self.assertRaisesRegex(ValueError,'riga 1'): run()
 
     def test_only_folders_can_be_emptied(self):
         self.put('a.txt'); out,code=m.execute(self.plan(vuote=['a.txt']))

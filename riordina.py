@@ -19,6 +19,8 @@ import time
 
 # Attributi Windows dei file solo nel cloud: leggerli li scaricherebbe.
 CLOUD = 0x1000 | 0x40000 | 0x400000
+# Bit "name surrogate" del reparse tag: il reparse point rimanda a un altro percorso (junction, link WSL).
+SURROGATE = 0x20000000
 # Cartelle trattate come unità: l'inventario non scende al loro interno.
 HEAVY = {n.casefold() for n in ('.git', '.hg', '.svn', 'node_modules', '.venv', 'venv', '__pycache__',
                                 '.pytest_cache', '.mypy_cache', '.cache', '.uv-cache', '.tox', '.next')}
@@ -36,8 +38,8 @@ def day(ns):
     return time.strftime('%Y-%m-%d', time.localtime(ns / 1e9))
 
 def is_link(info):
-    # Link simbolici e junction non si seguono e non si spostano.
-    return stat.S_ISLNK(info.st_mode) or getattr(info, 'st_reparse_tag', 0) == stat.IO_REPARSE_TAG_MOUNT_POINT
+    # Link simbolici e junction non si seguono e non si spostano; il criterio è quello di os.lstat.
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_reparse_tag', 0) & SURROGATE)
 
 def is_cloud(info):
     return bool(getattr(info, 'st_file_attributes', 0) & CLOUD)
@@ -221,9 +223,16 @@ def journal_path(plan_path):
     return plan_path.with_name(plan_path.stem + '.giornale.jsonl')
 
 def read_journal(journal):
-    if not journal.is_file():
-        return []
-    return [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines() if line.strip()]
+    entries = []
+    lines = journal.read_text(encoding='utf-8').splitlines() if journal.is_file() else []
+    for number, line in enumerate(lines, 1):
+        try:
+            entries += [json.loads(line)] if line.strip() else []
+        except ValueError:
+            # Ogni riga precede la sua mossa: un'ultima riga troncata non corrisponde a una mossa fatta.
+            raise ValueError(f'Giornale illeggibile alla riga {number}: {journal}. Se è l\'ultima, '
+                             "è stata troncata da un'interruzione prima della sua mossa e si può togliere") from None
+    return entries
 
 def key(rel):
     return rel.casefold() if os.name == 'nt' else rel
