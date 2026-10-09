@@ -1,5 +1,5 @@
 [project]
-name = "sistema-conoscenza"
+name = "scrivano"
 version = "0.1.0"
 description = "Rilevatore locale dei cambiamenti nei file, con coda di revisione per archivi Markdown mantenuti da agenti"
 readme = "README.md"

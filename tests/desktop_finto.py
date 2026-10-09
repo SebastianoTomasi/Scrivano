@@ -5,7 +5,7 @@
 
 `genera` crea CARTELLA/Desktop, CARTELLA/Documenti e CARTELLA/Download e scrive
 CARTELLA/manifesto.json con l'impronta di ogni file creato. Con --strumento copia
-il repository in CARTELLA/Documenti/SistemaConoscenza, come uno zip scompattato.
+il repository in CARTELLA/Documenti/Scrivano, come uno zip scompattato.
 `verifica` controlla un'installazione fatta su quel Desktop. Solo libreria standard.
 """
 from __future__ import annotations
@@ -100,7 +100,7 @@ def genera(cartella, strumento=None, seme=1):
                  for nome, voci in (('Desktop', DESKTOP), ('Documenti', DOCUMENTI), ('Download', DOWNLOAD))}
     (cartella / 'manifesto.json').write_text(json.dumps(manifesto, ensure_ascii=False, indent=1), encoding='utf-8')
     if strumento:
-        shutil.copytree(strumento, cartella / 'Documenti' / 'SistemaConoscenza', ignore=shutil.ignore_patterns(
+        shutil.copytree(strumento, cartella / 'Documenti' / 'Scrivano', ignore=shutil.ignore_patterns(
             '.git', '__pycache__', '.stato', 'config.json', 'riordina.lock'))
     return manifesto
 
@@ -122,7 +122,7 @@ def carica_controlla():
 def verifica(cartella, strumento=None):
     cartella = Path(cartella)
     desktop = cartella / 'Desktop'
-    strumento = Path(strumento) if strumento else cartella / 'Documenti' / 'SistemaConoscenza'
+    strumento = Path(strumento) if strumento else cartella / 'Documenti' / 'Scrivano'
     manifesto = json.loads((cartella / 'manifesto.json').read_text(encoding='utf-8'))
     esiti = {}
     def esito(nome, ok, dettaglio):
@@ -135,7 +135,7 @@ def verifica(cartella, strumento=None):
     trovati = impronte(desktop, salta)
     attesi = sorted(sha for rel, sha in manifesto['Desktop'].items() if rel != SEGRETO)
     esito('contenuti', trovati == attesi, f'{len(trovati)} file sul Desktop, attesi {len(attesi)}')
-    fuori = impronte(cartella / 'Documenti', lambda rel: rel.startswith('SistemaConoscenza/'))
+    fuori = impronte(cartella / 'Documenti', lambda rel: rel.startswith('Scrivano/'))
     fuori += impronte(cartella / 'Download')
     esito('esterni', sorted(fuori) == sorted([*manifesto['Documenti'].values(), *manifesto['Download'].values()]),
           'Documenti e Download intatti')

@@ -1,4 +1,4 @@
-# Installare il sistema di conoscenza
+# Installare Scrivano
 
 Procedura per l'agente che installa il sistema sul PC dell'utente: capisce cosa c'è sul Desktop, propone un'organizzazione per domini, la applica con il consenso dell'utente e installa le pagine dell'archivio e il rilevatore. Se il sistema è già installato, segui [AGGIORNA.md](./AGGIORNA.md).
 
@@ -26,7 +26,7 @@ Se l'utente ti indica una cartella di prova al posto del Desktop, usala come rad
    ```
 
 2. Controlla Python 3.10 o successivo con `python --version`. Se manca, o se il comando apre il Microsoft Store, proponi `winget install --id Python.Python.3.14 -e` e attendi il sì; poi usa una shell nuova.
-3. Porta il repository in `Documenti\SistemaConoscenza`: con git `git clone <indirizzo> "<Documenti>\SistemaConoscenza"`, altrimenti scarica lo zip del repository e scompattalo lì. Questa cartella è lo **strumento**: i comandi seguenti partono da qui.
+3. Porta il repository in `Documenti\Scrivano`: con git `git clone <indirizzo> "<Documenti>\Scrivano"`, altrimenti scarica lo zip del repository e scompattalo lì. Questa cartella è lo **strumento**: i comandi seguenti partono da qui.
 4. Se il Desktop ha già un `AGENTS.md` con la sezione «Questa istanza», il sistema è installato: passa ad [AGGIORNA.md](./AGGIORNA.md). Un `AGENTS.md` diverso, o un `CLAUDE.md` nel Desktop o più in alto (farebbe ignorare `AGENTS.md` a Claude), va discusso con l'utente prima di procedere.
 5. Chiedi all'utente quali agenti usa, se non è evidente: Claude Code, Codex o entrambi.
 

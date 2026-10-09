@@ -1,12 +1,12 @@
-# SistemaConoscenza
+# Scrivano
 
-Mette in ordine il Desktop e ne fa un archivio personale che il tuo agente, Claude Code o Codex, sa consultare e tenere aggiornato. Ogni cartella ha una guida che dice cosa contiene; un rilevatore annota i file che cambiano, così l'agente sa cosa rileggere.
+Scrivano mette in ordine il Desktop e ne fa un archivio personale che il tuo agente, Claude Code o Codex, sa consultare e tenere aggiornato. Ogni cartella ha una guida che dice cosa contiene; un rilevatore annota i file che cambiano, così l'agente sa cosa rileggere.
 
 ## Per cominciare
 
 Serve Windows 11 con Claude Code o Codex. Se manca Python, lo installa l'agente.
 
-Apri l'agente sul tuo Desktop, in modalità auto (Claude Code) o con accesso completo (Codex), e scrivigli *Installa il sistema di conoscenza da* seguito dall'indirizzo di questo repository.
+Apri l'agente sul tuo Desktop, in modalità auto (Claude Code) o con accesso completo (Codex), e scrivigli *Installa Scrivano da* seguito dall'indirizzo di questo repository.
 
 L'agente guarda cosa c'è sul Desktop, ti propone un'organizzazione per argomenti e la applica quando sei d'accordo. Se preferisci non spostare nulla, il sistema si installa sulle cartelle che hai già.
 
@@ -17,7 +17,7 @@ L'agente guarda cosa c'è sul Desktop, ti propone un'organizzazione per argoment
 - Chiedi quello che ti serve, per esempio "dov'è il contratto d'affitto?" o "quanto ho speso di luce quest'anno?": l'agente parte dalla mappa e dalle guide.
 - Quando apri l'agente, un rilevatore gli dice quali file sono cambiati dall'ultima volta. Non gira in background e non devi occupartene.
 
-Per aggiornare il sistema scrivi all'agente *aggiorna il sistema di conoscenza*.
+Per aggiornare il sistema scrivi all'agente *aggiorna Scrivano*.
 
 ## Domande frequenti
 
@@ -27,7 +27,7 @@ Per aggiornare il sistema scrivi all'agente *aggiorna il sistema di conoscenza*.
 - **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
 - **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
 - **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
-- **Disinstallare.** Cancella `Documenti\SistemaConoscenza`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md`, le `GUIDA.md` delle cartelle ed eventualmente `.codex-root`. Il riordino resta.
+- **Disinstallare.** Cancella `Documenti\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md`, le `GUIDA.md` delle cartelle ed eventualmente `.codex-root`. Il riordino resta.
 
 ## Per l'agente
 
@@ -132,4 +132,4 @@ python tests/desktop_finto.py genera C:/Prove/Uno --strumento .
 python tests/desktop_finto.py verifica C:/Prove/Uno
 ```
 
-Poi chiedi all'agente di seguire `INSTALLA.md` in modalità prova, indicandogli `C:/Prove/Uno/Desktop` come Desktop e `C:/Prove/Uno/Documenti/SistemaConoscenza` come strumento.
+Poi chiedi all'agente di seguire `INSTALLA.md` in modalità prova, indicandogli `C:/Prove/Uno/Desktop` come Desktop e `C:/Prove/Uno/Documenti/Scrivano` come strumento.

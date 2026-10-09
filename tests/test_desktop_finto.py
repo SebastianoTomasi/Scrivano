@@ -33,7 +33,7 @@ class FakeDesktopTests(unittest.TestCase):
 
     def test_verification_needs_an_installation(self):
         d.genera(self.base,strumento=REPO)
-        self.assertTrue((self.base/'Documenti'/'SistemaConoscenza'/'INSTALLA.md').is_file())
+        self.assertTrue((self.base/'Documenti'/'Scrivano'/'INSTALLA.md').is_file())
         out=d.verifica(self.base)
         self.assertTrue(out['esiti']['contenuti']['ok']); self.assertTrue(out['esiti']['esterni']['ok'])
         self.assertFalse(out['esiti']['pagine']['ok']); self.assertFalse(out['ok'])

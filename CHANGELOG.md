@@ -2,6 +2,12 @@
 
 Voci per data, dalla più recente. Ogni voce dice cosa cambia; **Azioni per l'istanza** dice cosa adattare in un'installazione già presente, seguendo [AGGIORNA.md](./AGGIORNA.md).
 
+## 2026-10-09: il sistema si chiama Scrivano
+
+- Nuovo nome per repository, cartella dello strumento (`Documenti\Scrivano`) e frasi da dire all'agente: *installa Scrivano*, *aggiorna Scrivano*.
+
+**Azioni per l'istanza:** se lo strumento sta in `Documenti\SistemaConoscenza`, rinomina la cartella in `Scrivano`; poi aggiorna i percorsi in «Questa istanza» di `AGENTS.md`, nei comandi di avvio e in `MANUTENZIONE.md`, e l'esclusione in `config.json`.
+
 ## 2026-10-09
 
 Prima versione installabile.

@@ -7,6 +7,6 @@
     {"id": "Download", "path": "C:/Users/utente/Downloads", "recursive": false}
   ],
   "exclude_dirs": [".git", ".venv", "venv", "node_modules", "__pycache__", ".stato", ".pytest_cache", ".cache", "dist", "build"],
-  "exclude_paths": ["SistemaConoscenza", ".claude/worktrees/*", "*/.claude/worktrees/*"],
+  "exclude_paths": ["Scrivano", ".claude/worktrees/*", "*/.claude/worktrees/*"],
   "exclude_files": ["desktop.ini", "Thumbs.db", "*.pyc", ".env", ".env.*", "*.pem", "*.key", "id_rsa*", "id_ed25519*", "*.kdbx", "*passw*", "*credenzial*", "*credential*"]
 }

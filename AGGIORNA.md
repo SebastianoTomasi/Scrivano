@@ -1,4 +1,4 @@
-# Aggiornare il sistema di conoscenza
+# Aggiornare Scrivano
 
 Procedura per l'agente quando l'utente chiede di aggiornare il sistema già installato. Le pagine del Desktop appartengono all'utente: un aggiornamento le integra, senza sovrascriverle.
 

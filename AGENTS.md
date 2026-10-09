@@ -1,4 +1,4 @@
-# SistemaConoscenza
+# Scrivano
 
 Se l'utente ti chiede di installare o aggiornare il sistema, segui [INSTALLA.md](./INSTALLA.md) o [AGGIORNA.md](./AGGIORNA.md) e basta: il resto di questa pagina vale solo per chi sviluppa il repository.
 
