@@ -12,4 +12,4 @@ Strumenti descritti nel [README](./README.md): `controlla.py` rileva i cambiamen
 - Prima di consegnare esegui `python -m unittest discover -s tests -v`.
 - Il repository diventerà pubblico: tieni fuori `config.json`, `.stato/`, percorsi, nomi, note e dati personali, anche dai messaggi di commit. Un'istanza reale passa la propria configurazione con `--config`.
 - I modelli e le procedure valgono per chiunque: scrivili generici, con segnaposto `{{...}}` dove servono i valori di un'installazione.
-- Se cambi comandi, formato della configurazione o del piano, o comportamento della coda, aggiorna il README nello stesso commit. Se cambi modelli o procedure, aggiungi una voce al [CHANGELOG](./CHANGELOG.md) con le azioni per un'istanza già installata.
+- Se cambi comandi, formato della configurazione o del piano, o comportamento della coda, aggiorna il README nello stesso commit. Se cambi modelli o procedure, scrivilo nel [CHANGELOG](./CHANGELOG.md) con le azioni per un'istanza già installata: una sola voce per data, perché la data fa da versione delle istanze.

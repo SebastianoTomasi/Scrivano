@@ -27,7 +27,7 @@ Per aggiornare il sistema scrivi all'agente *aggiorna Scrivano*.
 - **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
 - **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
 - **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
-- **Disinstallare.** Cancella `Documenti\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md`, le `GUIDA.md` delle cartelle ed eventualmente `.codex-root`. Il riordino resta.
+- **Disinstallare.** Cancella `Documenti\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
 
 ## Per l'agente
 

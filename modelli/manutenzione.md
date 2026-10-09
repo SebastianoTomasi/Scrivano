@@ -29,7 +29,7 @@ Una nota deve rendere chiari **tema, stato noto, fonte/data e questioni aperte**
 | `CHANGELOG.md` | Transizioni che spiegano lo stato corrente | La storia aiuta a capire una decisione |
 | `README.md` | Uso, configurazione e limiti di uno strumento | Esiste uno strumento da usare o mantenere |
 
-Claude Code e Codex leggono `AGENTS.md` direttamente; non servono `CLAUDE.md`. Le guide sono file normali raggiunti dai link: Codex non carica gli `AGENTS.md` sotto la cartella di avvio e Claude li caricherebbe solo leggendo file lì dentro, mentre un link funziona allo stesso modo per entrambi. Con Codex, `.codex-root` segna il Desktop come radice di progetto (`project_root_markers` in `~/.codex/config.toml`): una sessione aperta in una sottocartella legge comunque l'`AGENTS.md` della radice.
+Claude Code e Codex leggono `AGENTS.md` direttamente. Niente `CLAUDE.md` o `CLAUDE.local.md` nel Desktop o più in alto: Claude Code leggerebbe quelli al posto di `AGENTS.md`. Le guide sono file normali raggiunti dai link: Codex non carica gli `AGENTS.md` sotto la cartella di avvio e Claude li caricherebbe solo leggendo file lì dentro, mentre un link funziona allo stesso modo per entrambi. Con Codex, `.codex-root` segna il Desktop come radice di progetto (`project_root_markers` in `~/.codex/config.toml`): una sessione aperta in una sottocartella legge comunque l'`AGENTS.md` della radice, tranne dentro un repository, che ha le sue istruzioni.
 
 - Scrivi la regola una volta, nella sede competente; altrove rimanda. Usa verbi operativi e specifica quando un'azione serve.
 - Mantieni selettivi gli ingressi di guide e mappe: collegamenti utili, non inventari completi né copie dello stato corrente.
@@ -39,32 +39,31 @@ Claude Code e Codex leggono `AGENTS.md` direttamente; non servono `CLAUDE.md`. L
 
 ## Revisionare i cambiamenti
 
-All'avvio segui [AGENTS.md](./AGENTS.md#avvio-del-lavoro). Per i comandi seguenti, parti dalla cartella dello strumento:
+All'avvio segui [AGENTS.md](./AGENTS.md#avvio-del-lavoro). I comandi usano il percorso completo dello strumento, così funzionano da qualsiasi cartella senza cambiarla:
 
 ```powershell
-Set-Location "{{strumento}}"
-python controlla.py pending --root Desktop --prefix Finanze --limit 30
+python "{{strumento}}/controlla.py" pending --root Desktop --prefix Finanze --limit 30
 ```
 
-La coda parte dal cambiamento più recente. `--prefix` usa il percorso relativo con `/`; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: confronta `matched` con gli elementi mostrati e aumenta il limite se serve. Gli altri eventi restano in coda.
+La coda parte dal cambiamento più recente. `--prefix` è il percorso relativo alla radice; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: confronta `matched` con gli elementi mostrati e aumenta il limite se serve. Gli altri eventi restano in coda.
 
 1. Leggi i file pertinenti e riconciliali con note e collegamenti. Lascia aperti conflitti e cambiamenti non esaminati.
-2. Dopo le modifiche, esegui `python controlla.py scan --root Desktop` (o le radici coinvolte), poi rileggi `pending`: gli ID possono cambiare.
+2. Dopo le modifiche, esegui `python "{{strumento}}/controlla.py" scan --root Desktop` (o le radici coinvolte), poi rileggi `pending`: gli ID possono cambiare.
 3. Chiudi soltanto gli eventi riconciliati, indicando cosa hai verificato. Esempio, con ID da sostituire:
 
    ```powershell
-   python controlla.py review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
+   python "{{strumento}}/controlla.py" review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
    ```
 
 Quando la coda si allunga, chiudi per filtro gli eventi che non toccano note né fonti, per esempio foto o documenti aggiunti in cartelle senza note da aggiornare. `review` ricontrolla ogni file e, se uno è cambiato, non chiude nulla:
 
 ```powershell
-python controlla.py review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
+python "{{strumento}}/controlla.py" review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
 ```
 
-Per spostare file dopo il sì dell'utente, per esempio quelli nuovi della radice, usa `riordina.py` con un piano piccolo: non sovrascrive, annota le mosse e permette di annullarle.
+Per spostare file dopo il sì dell'utente, per esempio quelli nuovi della radice, scrivi un piano piccolo in `{{strumento}}/.stato/`, con un nome nuovo, ed eseguilo con `python "{{strumento}}/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle. Lì piano e giornale restano fuori dalla coda.
 
-Se la radice ha errori o il file è cambiato, correggi il problema, ripeti la scansione e riesamina. Non svuotare il registro per aggirare un conflitto. Una scansione parziale va dichiarata; una interrotta non dimostra assenza di modifiche. Comandi e limiti nel [README dello strumento]({{strumento}}/README.md).
+Se la radice ha errori o il file è cambiato, correggi il problema, ripeti la scansione e riesamina. Un errore che non si risolve, come un file sempre bloccato, si esclude in `config.json`. Non svuotare il registro per aggirare un conflitto. Una scansione parziale va dichiarata; una interrotta non dimostra assenza di modifiche. Comandi e limiti nel [README dello strumento](<{{strumento}}/README.md>).
 
 ## Copertura del rilevatore
 
@@ -74,7 +73,7 @@ Quando cambi radici, profondità o esclusioni in `config.json`, aggiorna questa 
 
 ## Verifiche e registro
 
-Esegui `python controlla.py links` dalla cartella dello strumento. Correggi link e ancore rotti; controlla anche che le nuove note siano raggiungibili dalla guida pertinente. Il comando non verifica significato, URL remoti, riferimenti testuali o link dentro PDF/DOCX.
+Esegui `python "{{strumento}}/controlla.py" links`. Correggi link e ancore rotti; controlla anche che le nuove note siano raggiungibili dalla guida pertinente. Il comando non verifica significato, URL remoti, riferimenti testuali o link dentro PDF/DOCX.
 
 Le guide dei domini sono registrate nella [mappa generale](./MAPPA.md). Le guide annidate, con una riga sul loro ambito, si registrano qui:
 
