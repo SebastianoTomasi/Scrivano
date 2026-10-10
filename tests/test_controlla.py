@@ -125,6 +125,16 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(m.pending(self.config,prefix='z.md')['matched'],1)
         with self.assertRaises(ValueError): m.pending(self.config,limit=-1)
 
+    def test_pending_summarizes_folders_and_renames(self):
+        self.put('Vecchia/a.txt','a'); self.put('Vecchia/sub/b.txt','b'); self.put('x.md','x'); self.scan()
+        (self.root/'Vecchia').rename(self.root/'Nuova'); self.put('x.md','y'); self.scan()
+        summary=m.pending(self.config,limit=1)['summary']
+        self.assertEqual(summary['folder_renames'],[{'root':'test','from':'Vecchia','to':'Nuova','identical':2,
+                                                     'changed':0,'only_from':0,'only_to':0}])
+        self.assertIn({'root':'test','folder':'Vecchia/sub','deleted':2},summary['folders'])
+        self.assertIn({'root':'test','folder':'','modified':1},summary['folders'])
+        self.assertEqual(m.pending(self.config,prefix='x.md')['summary']['folder_renames'],[])
+
     def test_pending_items_carry_only_useful_fields(self):
         self.scan(); self.put('a.md','a'); self.scan()
         self.assertEqual(set(self.items()[0]),{'id','root','path','kind','created','before','after','superseded_events'})

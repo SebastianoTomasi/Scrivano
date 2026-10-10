@@ -45,7 +45,7 @@ All'avvio segui [AGENTS.md](./AGENTS.md#avvio-del-lavoro). I comandi usano il pe
 python "{{strumento}}/controlla.py" pending --root Desktop --prefix Finanze --limit 30
 ```
 
-La coda parte dal cambiamento più recente. `--prefix` è il percorso relativo alla radice; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: confronta `matched` con gli elementi mostrati e aumenta il limite se serve. Gli altri eventi restano in coda.
+La coda parte dal cambiamento più recente. `--prefix` è il percorso relativo alla radice; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: confronta `matched` con gli elementi mostrati e aumenta il limite se serve. Gli altri eventi restano in coda. `summary` guarda tutti gli eventi filtrati: le cartelle con più eventi dicono dove sta il grosso della coda, e ogni voce di `folder_renames` è una cartella rinominata o spostata. Una rinomina si chiude con `review --prefix` sulla vecchia e sulla nuova cartella, dopo aver controllato che i file `changed` o `only_from` non tocchino note o fonti.
 
 1. Leggi i file pertinenti e riconciliali con note e collegamenti. Lascia aperti conflitti e cambiamenti non esaminati.
 2. Dopo le modifiche, esegui `python "{{strumento}}/controlla.py" scan --root Desktop` (o le radici coinvolte), poi rileggi `pending`: gli ID possono cambiare.

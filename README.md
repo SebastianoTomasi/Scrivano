@@ -73,7 +73,7 @@ Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente 
 ### Ciclo di revisione
 
 1. `scan` registra aggiunte, modifiche e cancellazioni, incluse le cartelle vuote. La prima scansione di una radice crea solo la base osservata e non dichiara letti i documenti.
-2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate.
+2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate. `summary` riassume gli eventi filtrati, anche quelli oltre il limite: le dieci cartelle con più eventi, fino a due livelli, e le rinomine di cartella, cioè una cartella cancellata e una aggiunta nella stessa radice con almeno metà dei file identici.
 3. L'agente legge i file, aggiorna le note e riesegue `scan`: anche le note modificate generano eventi.
 4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla. Gli eventi di percorsi non più osservati (esclusi, oltre la profondità o di una radice tolta dalla configurazione) si chiudono senza ricontrollo. Dopo una rinomina di sole maiuscole il vecchio nome conta come cancellato, anche se Windows lo trova ancora.
 

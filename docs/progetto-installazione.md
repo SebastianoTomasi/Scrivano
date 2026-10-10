@@ -63,7 +63,7 @@ I domini si scelgono dall'oggetto delle domande, non dal tipo di file o dal cont
 
 - L'agente aperto sul Desktop legge `AGENTS.md` ed esegue `scan` e `pending`.
 - Con il limite, `pending` mostra i cambiamenti più recenti; `--depth 1` mostra solo quelli della radice.
-- La coda si mantiene da sola: quando si allunga, l'agente chiude con una nota le voci che non richiedono lavoro (`review --prefix`), senza disturbare l'utente.
+- La coda si mantiene da sola: oltre i 50 eventi, una volta per sessione e dopo aver risposto, l'agente chiude con una nota rinomine e gruppi che non richiedono lavoro (`review --prefix`), partendo dal riepilogo di `pending`, e propone in una riga di escludere il rumore che si ripete.
 - File nuovi in radice: al massimo una proposta per sessione su dove metterli; se l'utente dice "lascia", la voce si chiude.
 
 ## Aggiornamento e disinstallazione

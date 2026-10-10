@@ -1,6 +1,7 @@
 """Registro locale dei cambiamenti. Solo libreria standard; nessuna rete."""
 from __future__ import annotations
 import argparse
+from collections import Counter
 import fnmatch
 import hashlib
 import json
@@ -266,6 +267,49 @@ def scan(config, root_ids=None, full=False):
         con.close()
     return results
 
+def summarize(rows):
+    # Riepilogo della coda filtrata: le cartelle con più eventi e le rinomine di cartella riconosciute
+    # dalle impronte, così cento file spostati si leggono in una riga. Solo suggerimenti, come per i file.
+    sides, folders = {}, {}
+    for r in rows:
+        gone = r['kind'] == 'deleted'
+        sig = json.loads(r['before_sig'] if gone else r['after_sig'])
+        sides[(gone, r['root'], r['path'])] = sig
+        parts = r['path'].split('/')
+        folder = '/'.join((parts if sig['kind'] == 'directory' else parts[:-1])[:2])  # '' = la radice
+        folders.setdefault((r['root'], folder), Counter())[r['kind']] += 1
+    # Cartelle più alte di ogni gruppo cancellato o aggiunto, con i file che contengono.
+    trees = {(gone, root, path): {} for (gone, root, path), sig in sides.items()
+             if sig['kind'] == 'directory' and (gone, root, path.rpartition('/')[0]) not in sides}
+    for (gone, root, path), sig in sides.items():
+        parts = path.split('/')
+        for i in range(1, len(parts)):
+            top = (gone, root, '/'.join(parts[:i]))
+            if top in trees and sig['kind'] == 'file':
+                trees[top]['/'.join(parts[i:])] = sig
+                break
+    renames, used = [], set()
+    for (gone, root, old), before in trees.items():
+        if not gone:
+            continue
+        best = None
+        for (gone2, root2, new), after in trees.items():
+            if gone2 or root2 != root or (root, new) in used:
+                continue
+            equal = sum(1 for rel, sig in before.items() if rel in after and same(sig, after[rel]))
+            if equal and equal * 2 >= max(len(before), len(after)) and (best is None or equal > best[0]):
+                best = (equal, new, after)
+        if best:
+            equal, new, after = best
+            used.add((root, new))
+            renames.append({'root': root, 'from': old, 'to': new, 'identical': equal,
+                            'changed': sum(1 for rel in before if rel in after) - equal,
+                            'only_from': sum(1 for rel in before if rel not in after),
+                            'only_to': sum(1 for rel in after if rel not in before)})
+    busiest = sorted(folders.items(), key=lambda item: -sum(item[1].values()))[:10]
+    return {'folders': [{'root': root, 'folder': folder, **counts} for (root, folder), counts in busiest],
+            'folder_renames': renames}
+
 def pending(config, root=None, prefix=None, limit=100, depth=None):
     if depth is not None and depth < 1:
         raise ValueError('Profondità non valida: usare un intero >= 1')
@@ -293,6 +337,7 @@ def pending(config, root=None, prefix=None, limit=100, depth=None):
                 sha = (json.loads(r['after_sig']) or {}).get('hash')
                 if sha:
                     added_by_hash[sha] = added_by_hash.get(sha, 0) + 1
+        summary = summarize(rows)  # prima di decodificare gli elementi mostrati, che cambiano le righe
         # Il limite tronca solo l'output: arricchisce soltanto gli elementi mostrati.
         items = rows[:limit]
         for row in items:
@@ -305,7 +350,7 @@ def pending(config, root=None, prefix=None, limit=100, depth=None):
                     row['possible_rename_from'] = {'root': candidates[0]['root'], 'path': candidates[0]['path'], 'id': candidates[0]['id']}
             row['superseded_events'] = con.execute(
                 "SELECT count(*) FROM events WHERE root=? AND path=? AND status='superseded'", (row['root'], row['path'])).fetchone()[0]
-        return {'total_pending': len(all_rows), 'matched': len(rows), 'items': items}
+        return {'total_pending': len(all_rows), 'matched': len(rows), 'summary': summary, 'items': items}
     finally:
         con.close()
 
