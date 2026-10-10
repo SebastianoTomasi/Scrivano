@@ -43,6 +43,6 @@ Prima di sovrascrivere, verifica che il file non sia cambiato dalla lettura. Agg
 ## Questa istanza
 
 - Perimetro: {{perimetro}} ([percorsi esterni](./MAPPA.md#percorsi-esterni)).
-- Strumento: `{{strumento}}`, con configurazione e registro accanto a `controlla.py`. Modelli del {{versione}}.
+- Strumento: `{{strumento}}`, con la configurazione accanto a `controlla.py` e il registro dove indica `database`. Modelli del {{versione}}.
 
 Verificato: {{data}}

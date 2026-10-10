@@ -27,7 +27,7 @@ Per aggiornare il sistema scrivi all'agente *aggiorna Scrivano*.
 - **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
 - **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
 - **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
-- **Disinstallare.** Cancella `Documenti\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
+- **Disinstallare.** Cancella `Documenti\Scrivano` e, se c'è, `%LOCALAPPDATA%\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
 
 ## Per l'agente
 
@@ -60,7 +60,7 @@ Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\
 Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione.
 
 - `desktop`: radice dell'archivio da cui parte `links`.
-- `database`: registro SQLite, di norma `.stato/registro.sqlite`.
+- `database`: registro SQLite, di norma `.stato/registro.sqlite`; in una cartella locale, non sincronizzata.
 - `roots`: radici osservate, ognuna con `id` e `path`. `depth: N` osserva N livelli sotto la radice; `recursive: false` equivale a 1.
 - `exclude_dirs`: nomi esatti da saltare a qualsiasi livello, di cartelle o di file.
 - `exclude_files`: nomi con i caratteri jolly `*` e `?`, confrontati con l'ultima parte di ogni percorso: valgono anche per le cartelle, quindi `*passw*` salta pure una cartella `Password`.
@@ -115,6 +115,7 @@ Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento d
 | --- | --- |
 | Dimensione e timestamp invariati | La scansione veloce può perdere l'edit; usa `--full` se sospetto |
 | File solo nel cloud (OneDrive) | Confrontati su dimensione e data senza leggerli, quindi senza scaricarli; niente suggerimenti di rinomina |
+| Registro in una cartella sincronizzata (OneDrive) | Il client può bloccarlo mentre lo carica o crearne copie in conflitto: tienilo in una cartella locale, con `database` assoluto, per esempio in `%LOCALAPPDATA%\Scrivano` |
 | File creato e cancellato tra scansioni | Non osservabile; il registro non è un backup né una cronologia dei contenuti |
 | Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate. Finché l'errore resta, `review` rifiuta gli eventi di quella radice: correggi la causa o escludi il percorso |
 | Eccezione o interruzione prima del commit | Annulla la transazione; ripeti la scansione |

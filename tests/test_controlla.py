@@ -321,6 +321,11 @@ class DetectorTests(unittest.TestCase):
         config=m.load_config(path)
         self.assertEqual((config['desktop'],config['roots'][0]['path']),(str(self.root.resolve()),)*2)
         self.assertEqual(config['database'],str(folder/'.stato/registro.sqlite'))
+        # Registro in una cartella locale fuori dallo strumento, come quando Documenti è su OneDrive.
+        local=self.base/'Locale'/'Scrivano'/'registro.sqlite'
+        path.write_text(json.dumps({'database':str(local),'roots':[{'id':'test','path':str(self.root)}]}),encoding='utf-8')
+        config=m.load_config(path); self.assertEqual(config['database'],str(local))
+        m.scan(config); self.assertTrue(local.is_file())
 
     def test_invalid_config_is_rejected(self):
         path=self.base/'config.json'; roots=[{'id':'x','path':'.'}]

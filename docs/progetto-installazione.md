@@ -23,7 +23,7 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 
 ## Dove sta cosa
 
-- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella.
+- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella. Se Documenti è sincronizzato da OneDrive, il registro va in `%LOCALAPPDATA%\Scrivano`: un database che cambia a ogni sessione non sta bene in una cartella sincronizzata.
 - **Desktop**, radice dell'archivio: `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` in radice; in ogni dominio una `GUIDA.md` con confine, regole locali, ingressi e copertura. Una mappa separata si aggiunge solo quando il dominio cresce. `.codex-root` solo se l'utente usa Codex.
 - **Un solo `AGENTS.md`.** Le guide di dominio sono md normali raggiunti dalla mappa: Codex non carica gli `AGENTS.md` sotto la cartella di avvio, mentre Claude li caricherebbe solo quando legge un file lì dentro. Un link esplicito funziona allo stesso modo con entrambi.
 - **Nient'altro oltre all'archivio**: nessuna skill sul Desktop, nessun puntatore in `~/.claude` o `~/.codex`. Per le cose personali l'utente apre l'agente sul Desktop.
