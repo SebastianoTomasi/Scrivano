@@ -12,7 +12,7 @@ Archivio personale distribuito per dominio. Parti da [MAPPA.md](./MAPPA.md); leg
    python "{{strumento}}/controlla.py" pending --limit 30
    ```
 
-3. Esamina gli eventi pertinenti e lascia pendenti gli altri. Quando la coda si allunga, chiudi da solo quelli che non richiedono lavoro. Filtri, chiusure ed errori: [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).
+3. Esamina gli eventi pertinenti e lascia pendenti gli altri. Se `total_pending` supera 50, dopo aver risposto riordina la coda, una volta per sessione: chiudi con una nota le rinomine di cartella e i gruppi che non toccano note, partendo da `summary`, e se un rumore si ripete proponi in una riga di escluderlo. Filtri, chiusure ed errori: [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).
 4. Cerca prima nelle note, poi nelle fonti e nei percorsi del dominio. Se manca una sintesi, cerca nei materiali censiti: non significa che manchi l'informazione.
 5. Dopo aver risposto, se nella radice del Desktop sono comparsi file nuovi, proponi in una riga dove metterli, al massimo una volta per sessione. Sposta solo dopo il sì; se l'utente li lascia dove sono, chiudi i loro eventi annotando la scelta.
 
