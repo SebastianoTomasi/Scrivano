@@ -158,6 +158,12 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(m.review(self.config,[event,event],'letto')['reviewed'],[event])
         self.assertEqual(self.items(),[])
 
+    def test_case_only_rename_can_be_reviewed(self):
+        # Su Windows il vecchio nome trova ancora la cartella rinominata: per la cancellazione conta il nome sul disco.
+        self.put('foto/a.jpg','a'); self.scan(); (self.root/'foto').rename(self.root/'Foto'); self.scan()
+        ids=[r['id'] for r in self.items()]; self.assertEqual(len(ids),4)
+        m.review(self.config,ids,'rinomina di sole maiuscole'); self.assertEqual(self.items(),[])
+
     def test_unknown_root_is_named(self):
         with self.assertRaisesRegex(ValueError,'Altra'): m.scan(self.config,['test','Altra'])
         with self.assertRaisesRegex(ValueError,'Altra'): m.pending(self.config,root='Altra')

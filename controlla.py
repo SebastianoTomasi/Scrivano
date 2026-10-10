@@ -170,6 +170,19 @@ def walk(root, config, previous, full=False):
 def beneath(path, prefix):
     return not prefix or path == prefix or path.startswith(prefix + '/')
 
+def spelled(base, rel):
+    # Vero se rel esiste con queste maiuscole: su Windows un percorso trova il file anche con nomi
+    # scritti diversamente, ma dopo una rinomina di sole maiuscole il vecchio nome non c'è più.
+    folder = Path(base)
+    for part in rel.split('/'):
+        try:
+            if part not in os.listdir(folder):
+                return False
+        except OSError:
+            return False
+        folder = folder / part
+    return True
+
 def clean_prefix(prefix):
     # I percorsi del registro usano '/': accetta anche '\' e le barre in testa o in coda.
     return prefix.replace('\\', '/').strip('/') if prefix else prefix
@@ -336,7 +349,10 @@ def review(config, ids, note, root=None, prefix=None):
                     if not Path(base['path']).is_dir():
                         raise ValueError('Radice non disponibile')
                     current = None
-                if not same(current, json.loads(row['after_sig'])):
+                expected = json.loads(row['after_sig'])
+                if expected is None and current is not None and not spelled(base['path'], row['path']):
+                    current = None
+                if not same(current, expected):
                     raise ValueError(f'Evento {event_id}: file cambiato; scansionare e riesaminare')
             con.execute("UPDATE events SET status='reviewed',reviewed=?,note=? WHERE id=?", (stamp(), note, event_id))
         con.commit()
