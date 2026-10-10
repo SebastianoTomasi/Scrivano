@@ -1,7 +1,7 @@
 [project]
 name = "scrivano"
 version = "0.1.0"
-description = "Rilevatore locale dei cambiamenti nei file, con coda di revisione per archivi Markdown mantenuti da agenti"
+description = "Archivio personale sul Desktop tenuto da un agente: riordino con piano approvato e rilevatore dei cambiamenti con coda di revisione"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

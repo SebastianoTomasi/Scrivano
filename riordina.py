@@ -19,6 +19,8 @@ import time
 
 # Attributi Windows dei file solo nel cloud: leggerli li scaricherebbe.
 CLOUD = 0x1000 | 0x40000 | 0x400000
+# Bit "name surrogate" del reparse tag: il reparse point rimanda a un altro percorso (junction, link WSL).
+SURROGATE = 0x20000000
 # Cartelle trattate come unità: l'inventario non scende al loro interno.
 HEAVY = {n.casefold() for n in ('.git', '.hg', '.svn', 'node_modules', '.venv', 'venv', '__pycache__',
                                 '.pytest_cache', '.mypy_cache', '.cache', '.uv-cache', '.tox', '.next')}
@@ -36,8 +38,8 @@ def day(ns):
     return time.strftime('%Y-%m-%d', time.localtime(ns / 1e9))
 
 def is_link(info):
-    # Link simbolici e junction non si seguono e non si spostano.
-    return stat.S_ISLNK(info.st_mode) or getattr(info, 'st_reparse_tag', 0) == stat.IO_REPARSE_TAG_MOUNT_POINT
+    # Link simbolici e junction non si seguono e non si spostano; il criterio è quello di os.lstat.
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_reparse_tag', 0) & SURROGATE)
 
 def is_cloud(info):
     return bool(getattr(info, 'st_file_attributes', 0) & CLOUD)
@@ -220,6 +222,18 @@ def load_plan(path):
 def journal_path(plan_path):
     return plan_path.with_name(plan_path.stem + '.giornale.jsonl')
 
+def read_journal(journal):
+    entries = []
+    lines = journal.read_text(encoding='utf-8').splitlines() if journal.is_file() else []
+    for number, line in enumerate(lines, 1):
+        try:
+            entries += [json.loads(line)] if line.strip() else []
+        except ValueError:
+            # Ogni riga precede la sua mossa: un'ultima riga troncata non corrisponde a una mossa fatta.
+            raise ValueError(f'Giornale illeggibile alla riga {number}: {journal}. Se è l\'ultima, '
+                             "è stata troncata da un'interruzione prima della sua mossa e si può togliere") from None
+    return entries
+
 def key(rel):
     return rel.casefold() if os.name == 'nt' else rel
 
@@ -228,25 +242,28 @@ def ancestors(rel):
     parts = rel.split('/')
     return ['/'.join(parts[:i]) for i in range(1, len(parts) + 1)]
 
-def status(root, src, dst):
+def linked(root, rel):
+    # Vero se rel, o una cartella che lo contiene, è un link simbolico o una junction.
+    return any(os.path.lexists(root / a) and is_link(os.stat(root / a, follow_symlinks=False)) for a in ancestors(rel))
+
+def status(root, src, dst, noted=False):
     has_src, has_dst = os.path.lexists(root / src), os.path.lexists(root / dst)
     if has_src and has_dst:
         return 'destinazione già occupata', None
+    if not has_src and not has_dst:
+        return 'origine mancante', None
     if not has_src:
-        # Origine assente e destinazione presente: mossa già fatta in un'esecuzione interrotta.
-        return (None, 'fatta') if has_dst else ('origine mancante', None)
-    if is_link(os.stat(root / src, follow_symlinks=False)):
+        # Già fatta solo se il giornale la registra; altrimenti il piano non descrive la cartella.
+        return (None, 'fatta') if noted else ('origine mancante e destinazione già occupata', None)
+    if linked(root, src):
         return 'link simbolico o junction: da spostare a mano', None
-    for folder in ancestors(dst)[:-1]:
-        if os.path.lexists(root / folder):
-            info = os.stat(root / folder, follow_symlinks=False)
-            if is_link(info):
-                return 'la destinazione passa da un link simbolico o una junction', None
-            if not stat.S_ISDIR(info.st_mode):
-                return 'un file occupa il percorso di destinazione', None
+    if linked(root, dst):
+        return 'la destinazione passa da un link simbolico o una junction', None
+    if any(os.path.lexists(root / a) and not os.path.isdir(root / a) for a in ancestors(dst)[:-1]):
+        return 'un file occupa il percorso di destinazione', None
     return None, 'da_fare'
 
-def check(root, moves, empties=()):
+def check(root, moves, empties=(), noted=frozenset()):
     # Il piano descrive l'albero originale: origini e destinazioni non si sovrappongono.
     keys = [(key(s), key(d)) for s, d in moves]
     sources, targets = Counter(s for s, _ in keys), Counter(d for _, d in keys)
@@ -267,15 +284,13 @@ def check(root, moves, empties=()):
         elif any(a in targets for a in ancestors(kd)[:-1]):
             issue = "destinazione dentro un'altra destinazione del piano"
         else:
-            issue, state = status(root, src, dst)
+            issue, state = status(root, src, dst, (ks, kd) in noted)
         states.append(state)
         if issue:
             problems.append({'mossa': number, 'da': src, 'a': dst, 'problema': issue})
     for folder in empties:
-        if os.path.lexists(root / folder):
-            info = os.stat(root / folder, follow_symlinks=False)
-            if is_link(info) or not stat.S_ISDIR(info.st_mode):
-                problems.append({'vuota': folder, 'problema': 'non è una cartella da svuotare'})
+        if os.path.lexists(root / folder) and (linked(root, folder) or not os.path.isdir(root / folder)):
+            problems.append({'vuota': folder, 'problema': 'non è una cartella da svuotare'})
     return states, problems
 
 def missing_parents(root, rel):
@@ -324,12 +339,15 @@ def note(log, **entry):
 
 def execute(plan_path, dry_run=False):
     root, moves, empties = load_plan(plan_path)
-    states, problems = check(root, moves, empties)
+    journal = journal_path(plan_path)
+    # Mosse annotate da un'esecuzione precedente dello stesso piano: le sole che possono risultare fatte.
+    noted = {(key(e['da']), key(e['a'])) for e in read_journal(journal) if 'da' in e}
+    states, problems = check(root, moves, empties, noted)
     report = {'radice': str(root), 'mosse': len(moves), 'da_fare': states.count('da_fare'),
               'gia_fatte': states.count('fatta'), 'problemi': problems}
     if problems or dry_run:
         return report, int(bool(problems))
-    journal, done, error, removed, kept = journal_path(plan_path), 0, None, [], []
+    done, error, removed, kept = 0, None, [], []
     with lock(plan_path.parent), open(journal, 'a', encoding='utf-8') as log:
         before = count_files(root)
         for (src, dst), state in zip(moves, states):
@@ -351,11 +369,11 @@ def execute(plan_path, dry_run=False):
             # Solo cartelle rimaste davvero vuote: una con qualcosa dentro resta e si segnala.
             if not os.path.lexists(root / folder):
                 continue
-            with os.scandir(root / folder) as listing:
-                if next(listing, None) is not None:
-                    kept.append(folder)
-                    continue
             try:
+                with os.scandir(root / folder) as listing:
+                    if next(listing, None) is not None:
+                        kept.append(folder)
+                        continue
                 note(log, rimossa=folder)
                 os.rmdir(root / folder)
                 removed.append(folder)
@@ -372,7 +390,7 @@ def undo(plan_path):
     journal = journal_path(plan_path)
     if not journal.is_file():
         raise ValueError(f'Nessun giornale da annullare: {journal}')
-    entries = [json.loads(line) for line in journal.read_text(encoding='utf-8').splitlines() if line.strip()]
+    entries = read_journal(journal)
     restored, in_place, removed, recreated, conflicts, error = 0, 0, 0, 0, [], None
     with lock(plan_path.parent):
         for entry in reversed(entries):

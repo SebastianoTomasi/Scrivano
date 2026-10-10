@@ -17,6 +17,11 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_CONFIG = HERE / 'config.json'
 # Attributi Windows dei file solo nel cloud (offline, recall on open, recall on data access).
 CLOUD = 0x1000 | 0x40000 | 0x400000
+# Bit "name surrogate" del reparse tag: il reparse point rimanda a un altro percorso (junction, link WSL).
+SURROGATE = 0x20000000
+
+class Linked(OSError):
+    """Link simbolico o junction: non si segue."""
 
 def stamp():
     return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
@@ -28,10 +33,15 @@ def digest(path):
             h.update(block)
     return h.hexdigest()
 
+def is_link(info):
+    # Link simbolici e junction, con lo stesso criterio di os.lstat; gli altri reparse point,
+    # come i file di OneDrive, sono file normali.
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_reparse_tag', 0) & SURROGATE)
+
 def signature(path, old=None, full=False):
     info = path.stat(follow_symlinks=False)
-    if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 1024:
-        raise OSError('Link/junction escluso')
+    if is_link(info):
+        raise Linked('Link/junction escluso')
     if stat.S_ISDIR(info.st_mode):
         return {'kind': 'directory', 'size': 0, 'mtime': 0, 'hash': None}
     if not stat.S_ISREG(info.st_mode):
@@ -81,15 +91,25 @@ def connect(db):
 
 def load_config(path):
     config = json.loads(path.read_text(encoding='utf-8-sig'))
-    ids = [r['id'] for r in config['roots']]
+    roots = config.get('roots') if isinstance(config, dict) else None
+    text = lambda value: isinstance(value, str) and value.strip()
+    if not isinstance(roots, list) or not all(isinstance(r, dict) and text(r.get('id')) and text(r.get('path')) for r in roots):
+        raise ValueError('Configurazione non valida: "roots" è un elenco di radici con "id" e "path"')
+    for key in ('desktop', 'database'):
+        if key in config and not text(config[key]):
+            raise ValueError(f'Configurazione non valida: "{key}" è un percorso')
+    ids = [r['id'] for r in roots]
     if len(ids) != len(set(ids)):
         raise ValueError('ID delle radici duplicati')
-    for root in config['roots']:
-        root['path'] = str(Path(root['path']).resolve())
+    # Percorsi relativi al file di configurazione, non alla cartella corrente; resolve() porta
+    # una radice che è un link alla sua destinazione.
+    for root in roots:
+        root['path'] = str((path.parent / root['path']).resolve())
         if 'depth' in root and (type(root['depth']) is not int or root['depth'] < 1):
             raise ValueError(f"Profondità non valida per {root['id']}: usare un intero >= 1")
-    database = Path(config.get('database', '.stato/registro.sqlite'))
-    config['database'] = str(database if database.is_absolute() else path.parent / database)
+    if 'desktop' in config:
+        config['desktop'] = str((path.parent / config['desktop']).resolve())
+    config['database'] = str(path.parent / config.get('database', '.stato/registro.sqlite'))
     return config
 
 def exclusions(config):
@@ -111,7 +131,6 @@ def root_depth(root):
     return root.get('depth', None if root.get('recursive', True) else 1)
 
 def walk(root, config, previous, full=False):
-    base = Path(root['path'])
     found, blocked, errors = {}, [], []
     skip, depth = exclusions(config), root_depth(root)
     def visit(folder, prefix, level):
@@ -129,33 +148,45 @@ def walk(root, config, previous, full=False):
                 continue
             path = Path(entry.path)
             try:
-                # DirEntry usa i dati dell'elenco: nessuna chiamata di sistema per link e junction.
-                if entry.is_symlink() or (hasattr(entry, 'is_junction') and entry.is_junction()):
-                    blocked.append(rel)
-                    continue
                 # Stat aggiornato, non entry.stat(): l'elenco può riportare dimensione e data
                 # vecchie per i file ancora aperti in scrittura.
                 sig = signature(path, previous.get(rel), full)
-                found[rel] = sig
-                if sig['kind'] == 'directory' and (depth is None or level < depth):
-                    visit(path, rel, level + 1)
-                elif sig['kind'] == 'directory':
-                    blocked.append(rel)
+            except Linked:
+                # Link e junction non si seguono: restano fuori, senza errore.
+                blocked.append(rel)
+                continue
             except OSError as exc:
                 blocked.append(rel)
                 errors.append({'path': str(path), 'error': str(exc)})
-    if base.is_symlink() or (hasattr(base, 'is_junction') and base.is_junction()):
-        return {}, [''], [{'path': str(base), 'error': 'Radice link/junction non seguita'}]
-    visit(base, '', 1)
+                continue
+            found[rel] = sig
+            if sig['kind'] == 'directory' and (depth is None or level < depth):
+                visit(path, rel, level + 1)
+            elif sig['kind'] == 'directory':
+                blocked.append(rel)
+    visit(Path(root['path']), '', 1)
     return found, blocked, errors
 
 def beneath(path, prefix):
     return not prefix or path == prefix or path.startswith(prefix + '/')
 
+def clean_prefix(prefix):
+    # I percorsi del registro usano '/': accetta anche '\' e le barre in testa o in coda.
+    return prefix.replace('\\', '/').strip('/') if prefix else prefix
+
 def matches(row, root=None, prefix=None, depth=None):
     # Filtri comuni a pending e review; depth conta i livelli sotto la radice (1 = solo la radice).
-    return ((not root or row['root'] == root) and (not prefix or beneath(row['path'], prefix))
-            and (depth is None or row['path'].count('/') < depth))
+    # Su Windows il prefisso, come i nomi dei file, non distingue maiuscole e minuscole.
+    path = row['path']
+    if prefix and os.name == 'nt':
+        path, prefix = path.casefold(), prefix.casefold()
+    return ((not root or row['root'] == root) and (not prefix or beneath(path, prefix))
+            and (depth is None or path.count('/') < depth))
+
+def known(con, config, root):
+    # Una radice tolta dalla configurazione resta nel registro con i suoi eventi.
+    if root and root not in {r['id'] for r in config['roots']} | {r[0] for r in con.execute('SELECT id FROM roots')}:
+        raise ValueError(f'Radice sconosciuta: {root}')
 
 def under_any(path, prefixes):
     # Equivale ad any(beneath(path, p) for p in prefixes), in tempo proporzionale alla profondità.
@@ -165,9 +196,10 @@ def under_any(path, prefixes):
     return any('/'.join(parts[:i]) in prefixes for i in range(1, len(parts) + 1))
 
 def scan(config, root_ids=None, full=False):
+    unknown = sorted(set(root_ids or ()) - {r['id'] for r in config['roots']})
+    if unknown:
+        raise ValueError(f"Radice sconosciuta: {', '.join(unknown)}")
     selected = [r for r in config['roots'] if not root_ids or r['id'] in root_ids]
-    if root_ids and set(root_ids) - {r['id'] for r in selected}:
-        raise ValueError('Radice sconosciuta')
     con = connect(Path(config['database']))
     results = []
     try:
@@ -224,10 +256,16 @@ def scan(config, root_ids=None, full=False):
 def pending(config, root=None, prefix=None, limit=100, depth=None):
     if depth is not None and depth < 1:
         raise ValueError('Profondità non valida: usare un intero >= 1')
+    if limit < 0:
+        raise ValueError('Limite non valido: usare un intero >= 0')
+    prefix = clean_prefix(prefix)
     con = connect(Path(config['database']))
     try:
-        # Dal più recente: con il limite restano in vista i cambiamenti nuovi.
-        all_rows = [dict(r) for r in con.execute("SELECT * FROM events WHERE status='pending' ORDER BY id DESC")]
+        known(con, config, root)
+        # Dal più recente: con il limite restano in vista i cambiamenti nuovi. I campi di stato e
+        # di revisione sono uguali per tutti gli eventi pendenti, quindi restano fuori dall'output.
+        all_rows = [dict(r) for r in con.execute('''SELECT id,root,path,kind,before_sig,after_sig,created
+            FROM events WHERE status='pending' ORDER BY id DESC''')]
         rows = [r for r in all_rows if matches(r, root, prefix, depth)]
         # Nessun rinomino viene applicato: solo suggerimenti univoci fra eventi pendenti.
         # Indice per impronta costruito una volta: ogni evento è decodificato al massimo una volta.
@@ -261,11 +299,19 @@ def pending(config, root=None, prefix=None, limit=100, depth=None):
 def review(config, ids, note, root=None, prefix=None):
     if not note.strip():
         raise ValueError('Indicare esito della revisione e note/fonti aggiornate')
+    prefix = clean_prefix(prefix)
     by_filter = bool(root or prefix)
     if bool(ids) == by_filter:
         raise ValueError('Indicare gli ID oppure un filtro (--root, --prefix)')
+    ids = list(dict.fromkeys(ids))  # un ID ripetuto si chiude una volta sola
+    skip, depths = exclusions(config), {r['id']: root_depth(r) for r in config['roots']}
+    def observed(row):
+        # Percorso ancora osservato: radice configurata, non escluso, entro la profondità.
+        depth = depths.get(row['root'], 0)
+        return row['root'] in depths and not skip(row['path']) and (depth is None or row['path'].count('/') < depth)
     con = connect(Path(config['database']))
     try:
+        known(con, config, root)
         con.execute('BEGIN IMMEDIATE')
         if by_filter:
             # Chiusura per filtro: stessi controlli evento per evento, nella stessa transazione.
@@ -275,20 +321,23 @@ def review(config, ids, note, root=None, prefix=None):
             row = con.execute('SELECT * FROM events WHERE id=?', (event_id,)).fetchone()
             if row is None or row['status'] != 'pending':
                 raise ValueError(f'Evento {event_id} non pendente; rileggere la coda')
-            base = con.execute('SELECT path,errors FROM roots WHERE id=?', (row['root'],)).fetchone()
-            if json.loads(base['errors']):
-                raise ValueError('Radice con errori: rieseguire la scansione prima della revisione')
-            path = Path(base['path']) / row['path']
-            try:
-                current = signature(path, full=True)
-            except FileNotFoundError:
-                # Una radice sparita non equivale alla cancellazione del file.
-                if not Path(base['path']).is_dir():
-                    raise ValueError('Radice non disponibile')
-                current = None
-            expected = json.loads(row['after_sig'])
-            if not same(current, expected):
-                raise ValueError(f'Evento {event_id}: file cambiato; scansionare e riesaminare')
+            # Un percorso uscito dalla copertura non ha più uno stato osservato con cui confrontarlo:
+            # l'evento si chiude con la sua nota, senza ricontrollare il file.
+            if observed(row):
+                base = con.execute('SELECT path,errors FROM roots WHERE id=?', (row['root'],)).fetchone()
+                if json.loads(base['errors']):
+                    raise ValueError(f"Radice {row['root']} con errori di scansione: correggerli o escluderli "
+                                     'nella configurazione, poi rieseguire scan prima della revisione')
+                path = Path(base['path']) / row['path']
+                try:
+                    current = signature(path, full=True)
+                except FileNotFoundError:
+                    # Una radice sparita non equivale alla cancellazione del file.
+                    if not Path(base['path']).is_dir():
+                        raise ValueError('Radice non disponibile')
+                    current = None
+                if not same(current, json.loads(row['after_sig'])):
+                    raise ValueError(f'Evento {event_id}: file cambiato; scansionare e riesaminare')
             con.execute("UPDATE events SET status='reviewed',reviewed=?,note=? WHERE id=?", (stamp(), note, event_id))
         con.commit()
     except BaseException:
@@ -298,27 +347,52 @@ def review(config, ids, note, root=None, prefix=None):
         con.close()
     return {'reviewed': len(ids), 'root': root, 'prefix': prefix} if by_filter else {'reviewed': ids}
 
+def status(config):
+    con = connect(Path(config['database']))
+    try:
+        return {'roots': [{**dict(r), 'errors': json.loads(r['errors'])} for r in con.execute('SELECT * FROM roots')],
+                'events': {r[0]: r[1] for r in con.execute('SELECT status,count(*) FROM events GROUP BY status')}}
+    finally:
+        con.close()
+
 LINK = re.compile(r'\]\((<[^>]+>|[^\)\n]+)\)')
+FENCE = re.compile(r'(?ms)^```.*?^```[^\n]*')
+HEADING = re.compile(r'^#{1,6}\s+(.+)$', re.M)
+START = ('AGENTS.md', 'MAPPA.md', 'MANUTENZIONE.md')
+
 def slug(s):
     s = re.sub(r'[^\w\s-]', '', s.lower(), flags=re.UNICODE)
     return s.strip().replace(' ', '-')
 
 def links(config):
-    base = Path(config['desktop'])
+    if not config.get('desktop'):
+        raise ValueError('Configurazione senza "desktop": serve a links come radice dell\'archivio')
+    base = Path(config['desktop']).resolve()
     skip = exclusions(config)
-    issues, visited, queue = [], set(), [base/'AGENTS.md', base/'MAPPA.md', base/'MANUTENZIONE.md']
+    issues, visited, pages = [], set(), {}
+    def page(path):
+        # Testo senza blocchi di codice, letto una volta: link e titoli degli esempi non contano.
+        if path not in pages:
+            try:
+                pages[path] = FENCE.sub('', path.read_text(encoding='utf-8-sig'))
+            except (OSError, UnicodeDecodeError):
+                pages[path] = None
+        return pages[path]
+    queue = [base / name for name in START if (base / name).is_file()]
+    issues += [{'file': str(base), 'target': name, 'error': 'missing'} for name in START if not (base / name).is_file()]
     while queue:
         path = queue.pop()
-        if path in visited or not path.is_file() or path.suffix.lower() != '.md':
+        if path in visited:
             continue
         # Le pagine in Archivio sono storiche; i percorsi esclusi sono fuori dall'archivio personale.
         rel = path.relative_to(base).as_posix()
         if 'Archivio' in rel.split('/') or skip(rel):
             continue
         visited.add(path)
-        text = path.read_text(encoding='utf-8-sig')
-        text = re.sub(r'(?ms)^```.*?^```[^\n]*', '', text)
-        for match in LINK.finditer(text):
+        if page(path) is None:
+            issues.append({'file': str(path), 'target': '', 'error': 'unreadable'})
+            continue
+        for match in LINK.finditer(page(path)):
             href = match[1].strip('<>')
             if re.match(r'^(https?|mailto|app|codex|memory):', href):
                 continue
@@ -327,11 +401,11 @@ def links(config):
             if not dest.exists():
                 issues.append({'file': str(path), 'target': href, 'error': 'missing'})
                 continue
-            if anchor and dest.is_file() and dest.suffix.lower() == '.md':
-                anchors = [slug(x) for x in re.findall(r'^#{1,6}\s+(.+)$', dest.read_text(encoding='utf-8-sig'), re.M)]
-                if unquote(anchor) not in anchors:
+            markdown = dest.is_file() and dest.suffix.lower() == '.md'
+            if anchor and markdown and page(dest) is not None:
+                if unquote(anchor) not in {slug(x) for x in HEADING.findall(page(dest))}:
                     issues.append({'file': str(path), 'target': href, 'error': 'anchor'})
-            if dest.is_relative_to(base) and dest.suffix.lower() == '.md':
+            if markdown and dest.is_relative_to(base):
                 queue.append(dest)
     return {'checked': len(visited), 'issues': issues, 'visited': sorted(map(str, visited))}
 
@@ -362,10 +436,7 @@ def main():
         out = links(config)
         code = int(bool(out['issues']))
     else:
-        con = connect(Path(config['database']))
-        out = {'roots': [dict(r) for r in con.execute('SELECT * FROM roots')],
-               'events': {r[0]: r[1] for r in con.execute('SELECT status,count(*) FROM events GROUP BY status')}}
-        con.close()
+        out = status(config)
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return code
 

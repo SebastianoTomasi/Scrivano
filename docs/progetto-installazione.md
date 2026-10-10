@@ -23,7 +23,7 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 
 ## Dove sta cosa
 
-- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella.
+- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella. Se Documenti è sincronizzato da OneDrive, il registro va in `%LOCALAPPDATA%\Scrivano`: un database che cambia a ogni sessione non sta bene in una cartella sincronizzata.
 - **Desktop**, radice dell'archivio: `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` in radice; in ogni dominio una `GUIDA.md` con confine, regole locali, ingressi e copertura. Una mappa separata si aggiunge solo quando il dominio cresce. `.codex-root` solo se l'utente usa Codex.
 - **Un solo `AGENTS.md`.** Le guide di dominio sono md normali raggiunti dalla mappa: Codex non carica gli `AGENTS.md` sotto la cartella di avvio, mentre Claude li caricherebbe solo quando legge un file lì dentro. Un link esplicito funziona allo stesso modo con entrambi.
 - **Nient'altro oltre all'archivio**: nessuna skill sul Desktop, nessun puntatore in `~/.claude` o `~/.codex`. Per le cose personali l'utente apre l'agente sul Desktop.
@@ -33,8 +33,8 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 
 La fa l'agente seguendo `INSTALLA.md`, a cui rimanda la parte del README dedicata all'agente.
 
-1. **Ingresso.** L'utente apre l'agente sul Desktop e scrive "installa Scrivano da \<url\>". L'agente scarica il repository in Documenti. Se trova un'installazione esistente, passa all'aggiornamento.
-2. **Controlli.** Python, percorso reale del Desktop, eventuali `CLAUDE.md` nel Desktop o più in alto: farebbero ignorare `AGENTS.md` a Claude.
+1. **Ingresso.** L'utente apre l'agente sul Desktop e scrive "installa Scrivano da \<url\>". Se l'agente trova un'installazione esistente, passa all'aggiornamento; altrimenti scarica il repository in Documenti.
+2. **Controlli.** Python, percorso reale del Desktop, eventuali `CLAUDE.md`, `CLAUDE.local.md` o `.claude\CLAUDE.md` nel Desktop o più in alto: farebbero ignorare `AGENTS.md` a Claude Code, che lo legge dalla versione 2.1.277.
 3. **Analisi.** `riordina.py inventario` riassume il Desktop. L'agente legge quello che gli serve; chiavi, `.env` e password le segnala senza leggerle né spostarle.
 4. **Proposta.** Domini dalla tassonomia di riferimento, adattata al materiale. Poche domande concrete, tante quante richiede il disordine. Livello consigliato: completo, leggero (solo file sparsi e collegamenti) o nessuno (domini e mappe sulle cartelle esistenti). L'utente approva il riassunto, non l'elenco dettagliato.
 5. **Riordino.** `riordina.py esegui` sul piano. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella; le cartelle-contenitore anonime ("Nuova cartella") si svuotano solo con approvazione e, rimaste vuote, si tolgono; i collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide qui: dopo restano fermi, e uno con un ambiente virtuale resta dov'è.
@@ -68,8 +68,8 @@ I domini si scelgono dall'oggetto delle domande, non dal tipo di file o dal cont
 
 ## Aggiornamento e disinstallazione
 
-- "Aggiorna Scrivano": l'agente segue `AGGIORNA.md`. Aggiorna il repository (`git pull`, oppure lo zip lasciando `config.json` e `.stato/`), legge nel CHANGELOG le voci successive alla data dei modelli scritta in «Questa istanza» e porta le modifiche nelle copie del Desktop, rispettando gli adattamenti locali.
-- La disinstallazione è descritta nel README: si cancellano la cartella in Documenti, le pagine di sistema del Desktop e l'eventuale configurazione di Codex. Il riordino resta.
+- "Aggiorna Scrivano": l'agente segue `AGGIORNA.md`. Aggiorna il repository (`git pull`, oppure lo zip lasciando `config.json` e `.stato/`), legge nel CHANGELOG le voci dalla data dei modelli scritta in «Questa istanza» in poi, compresa quella, e porta le modifiche nelle copie del Desktop, dalla voce più vecchia, rispettando gli adattamenti locali. La data fa da versione: il CHANGELOG ha una sola voce per data, con azioni che si possono ripetere.
+- La disinstallazione è descritta nel README: si cancellano la cartella in Documenti, le pagine di sistema del Desktop e l'eventuale configurazione di Codex. Il riordino e le note restano.
 
 ## Collaudo
 

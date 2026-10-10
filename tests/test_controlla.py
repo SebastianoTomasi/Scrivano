@@ -1,10 +1,11 @@
 import importlib.util
-from contextlib import closing
+from contextlib import closing, contextmanager
 import json
 import os
 from pathlib import Path
 import sqlite3
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 
@@ -20,6 +21,15 @@ def offline(path):
         raise unittest.SkipTest('attributo offline non impostabile')
 
 def never(*args, **kwargs): raise AssertionError('file letto: lo avrebbe scaricato dal cloud')
+
+def junction(target, link):
+    try:
+        if os.name=='nt':
+            import _winapi; _winapi.CreateJunction(str(target),str(link))
+        else:
+            os.symlink(target,link)
+    except OSError as exc:
+        raise unittest.SkipTest(f'link non creabile: {exc}')
 
 class DetectorTests(unittest.TestCase):
     def setUp(self):
@@ -113,6 +123,11 @@ class DetectorTests(unittest.TestCase):
         out=m.pending(self.config,prefix='new.md')
         self.assertEqual(out['items'][0]['possible_rename_from']['path'],'old.md')
         self.assertEqual(m.pending(self.config,prefix='z.md')['matched'],1)
+        with self.assertRaises(ValueError): m.pending(self.config,limit=-1)
+
+    def test_pending_items_carry_only_useful_fields(self):
+        self.scan(); self.put('a.md','a'); self.scan()
+        self.assertEqual(set(self.items()[0]),{'id','root','path','kind','created','before','after','superseded_events'})
 
     def test_pending_shows_newest_first(self):
         self.scan(); self.put('a.md','a'); self.scan(); self.put('b.md','b'); self.scan()
@@ -128,6 +143,43 @@ class DetectorTests(unittest.TestCase):
         self.scan(); self.put('Foto/1.jpg','1'); self.put('Foto/2.jpg','2'); self.put('x.md','x'); self.scan()
         out=m.review(self.config,[],'foto censite',prefix='Foto')
         self.assertEqual(out['reviewed'],3); self.assertEqual([r['path'] for r in self.items()],['x.md'])
+
+    def test_prefix_accepts_windows_separators(self):
+        self.scan(); self.put('Foto/Mare/1.jpg','1'); self.put('Fotografie.md','x'); self.scan()
+        self.assertEqual(m.pending(self.config,prefix='Foto/')['matched'],3)
+        self.assertEqual(m.pending(self.config,prefix='Foto\\Mare')['matched'],2)
+        self.assertEqual(m.pending(self.config,prefix='/Foto')['matched'],3)
+        if os.name=='nt': self.assertEqual(m.pending(self.config,prefix='foto/mare')['matched'],2)
+        self.assertEqual(m.review(self.config,[],'foto censite',prefix='Foto\\')['reviewed'],3)
+        self.assertEqual([r['path'] for r in self.items()],['Fotografie.md'])
+
+    def test_repeated_id_is_reviewed_once(self):
+        self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
+        self.assertEqual(m.review(self.config,[event,event],'letto')['reviewed'],[event])
+        self.assertEqual(self.items(),[])
+
+    def test_unknown_root_is_named(self):
+        with self.assertRaisesRegex(ValueError,'Altra'): m.scan(self.config,['test','Altra'])
+        with self.assertRaisesRegex(ValueError,'Altra'): m.pending(self.config,root='Altra')
+        with self.assertRaisesRegex(ValueError,'Altra'): m.review(self.config,[],'nota',root='Altra')
+
+    def test_events_out_of_coverage_can_be_reviewed(self):
+        # Dopo un'esclusione o con una profondità minore il percorso non si osserva più: si chiude senza ricontrollo.
+        self.scan(); lock=self.put('~$Relazione.docx','lock'); self.put('a/b/c.md','deep'); self.scan()
+        ids=[r['id'] for r in self.items()]
+        self.config['exclude_files'].append('~$*'); self.config['roots'][0]['depth']=2
+        lock.unlink(); self.put('a/b/c.md','cambiato'); self.scan()
+        self.assertEqual(m.review(self.config,ids,'fuori copertura')['reviewed'],ids); self.assertEqual(self.items(),[])
+
+    def test_status_lists_root_errors(self):
+        self.put('a.md','a'); self.scan(); self.root.rename(self.base/'altrove'); self.scan()
+        self.assertTrue(m.status(self.config)['roots'][0]['errors'][0]['error'])
+
+    def test_works_without_windows_stat_constants(self):
+        # Fuori da Windows il modulo stat non ha le costanti IO_REPARSE_TAG_*.
+        fake=types.SimpleNamespace(**{k:getattr(m.stat,k) for k in dir(m.stat) if not k.startswith('IO_REPARSE_TAG')})
+        self.put('a/b.md','b')
+        with patch.object(m,'stat',fake): self.assertEqual(self.scan()[0]['errors'],[])
 
     def test_review_needs_ids_or_filter(self):
         self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
@@ -168,15 +220,26 @@ class DetectorTests(unittest.TestCase):
 
     def test_links_and_junctions_are_not_followed(self):
         target=self.base/'target'; target.mkdir(); (target/'inside.md').write_text('x',encoding='utf-8')
-        self.scan()
-        try:
-            if os.name=='nt':
-                import _winapi; _winapi.CreateJunction(str(target),str(self.root/'link'))
-            else:
-                os.symlink(target,self.root/'link')
-        except OSError as exc:
-            self.skipTest(f'link non creabile: {exc}')
+        self.scan(); junction(target,self.root/'link')
         result=self.scan(); self.assertEqual(result[0]['errors'],[]); self.assertEqual(self.items(),[])
+
+    def test_junctions_without_direntry_support(self):
+        # Python 3.10 e 3.11: DirEntry non ha is_junction, eppure la junction resta fuori senza errori.
+        target=self.base/'target'; target.mkdir(); self.scan(); junction(target,self.root/'link')
+        real=m.os.scandir
+        class Old:
+            def __init__(self,e): self.name,self.path,self.is_symlink=e.name,e.path,e.is_symlink
+        @contextmanager
+        def old(path):
+            with real(path) as listing: yield [Old(e) for e in listing]
+        with patch.object(m.os,'scandir',side_effect=old): result=self.scan()
+        self.assertEqual((result[0]['errors'],self.items()),([],[]))
+
+    def test_example_config_skips_office_lock_files(self):
+        example=json.loads((Path(m.__file__).parent/'config.example.json').read_text(encoding='utf-8'))
+        self.config['exclude_files']=example['exclude_files']; self.scan()
+        self.put('~$Relazione.docx','lock'); self.put('.~lock.Bilancio.ods#','lock'); self.put('Relazione.docx','testo')
+        self.scan(); self.assertEqual([r['path'] for r in self.items()],['Relazione.docx'])
 
     def test_exclusions_and_hidden_instructions(self):
         self.scan(); self.put('node_modules/ignored.js','code'); self.put('.env','test')
@@ -236,7 +299,39 @@ class DetectorTests(unittest.TestCase):
     def test_links_skip_archive_and_excluded(self):
         self.config['exclude_dirs'].append('Bozze')
         self.put('AGENTS.md','[Vecchio](Archivio/vecchio.md) [Bozza](Bozze/b.md)')
+        self.put('MAPPA.md','# Mappa'); self.put('MANUTENZIONE.md','# Manutenzione')
         self.put('Archivio/vecchio.md','[rotto](manca.md)'); self.put('Bozze/b.md','[rotto](manca.md)')
         self.assertEqual(m.links(self.config)['issues'],[])
+
+    def test_links_report_missing_start_pages(self):
+        self.put('AGENTS.md','[Mappa](MAPPA.md)'); self.put('MAPPA.md','# Mappa')
+        self.assertEqual(m.links(self.config)['issues'],
+                         [{'file':str(self.root.resolve()),'target':'MANUTENZIONE.md','error':'missing'}])
+
+    def test_links_survive_unreadable_pages_and_ignore_code(self):
+        self.put('AGENTS.md','[Mappa](MAPPA.md) [Esempio](MANUTENZIONE.md#esempio)')
+        (self.root/'MAPPA.md').write_bytes(b'\x81\x82 non UTF-8')
+        self.put('MANUTENZIONE.md','# Manutenzione\n```powershell\n# esempio\n```\n')
+        found={(Path(i['file']).name,i['error']) for i in m.links(self.config)['issues']}
+        self.assertEqual(found,{('MAPPA.md','unreadable'),('AGENTS.md','anchor')})
+
+    def test_config_paths_are_relative_to_the_file(self):
+        folder=self.base/'istanza'; folder.mkdir(); path=folder/'config.json'
+        path.write_text(json.dumps({'desktop':'../files','roots':[{'id':'test','path':'../files'}]}),encoding='utf-8')
+        config=m.load_config(path)
+        self.assertEqual((config['desktop'],config['roots'][0]['path']),(str(self.root.resolve()),)*2)
+        self.assertEqual(config['database'],str(folder/'.stato/registro.sqlite'))
+        # Registro in una cartella locale fuori dallo strumento, come quando Documenti è su OneDrive.
+        local=self.base/'Locale'/'Scrivano'/'registro.sqlite'
+        path.write_text(json.dumps({'database':str(local),'roots':[{'id':'test','path':str(self.root)}]}),encoding='utf-8')
+        config=m.load_config(path); self.assertEqual(config['database'],str(local))
+        m.scan(config); self.assertTrue(local.is_file())
+
+    def test_invalid_config_is_rejected(self):
+        path=self.base/'config.json'; roots=[{'id':'x','path':'.'}]
+        for config in ({},[],{'roots':[{'id':'x'}]},{'roots':[{'id':'x','path':None}]},
+                       {'roots':roots,'desktop':None},{'roots':roots,'database':''}):
+            path.write_text(json.dumps(config),encoding='utf-8')
+            with self.assertRaises(ValueError,msg=config): m.load_config(path)
 
 if __name__=='__main__': unittest.main()

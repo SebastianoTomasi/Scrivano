@@ -142,12 +142,14 @@ def verifica(cartella, strumento=None):
 
     tutte = [p for p in desktop.rglob('*.md')]
     mancanti = [p for p in PAGINE if not (desktop / p).is_file()]
-    sotto = [p.relative_to(desktop).as_posix() for p in desktop.rglob('*')
-             if p.name in ('AGENTS.md', 'CLAUDE.md') and p.parent != desktop]
+    # Il Desktop finto parte senza istruzioni e l'installazione aggiunge solo l'AGENTS.md della radice:
+    # qualsiasi altro AGENTS.md o CLAUDE.md l'ha creato l'agente, e un CLAUDE.md farebbe ignorare AGENTS.md.
+    altre = [p.relative_to(desktop).as_posix() for p in desktop.rglob('*')
+             if (p.name == 'AGENTS.md' and p.parent != desktop) or p.name in ('CLAUDE.md', 'CLAUDE.local.md')]
     sistema = [desktop / p for p in PAGINE if (desktop / p).is_file()] + list(desktop.rglob('GUIDA.md'))
     segnaposto = [p.relative_to(desktop).as_posix() for p in sistema if '{{' in p.read_text(encoding='utf-8')]
-    esito('pagine', not (mancanti or sotto or segnaposto),
-          {'mancanti': mancanti, 'istruzioni_sotto_la_radice': sotto, 'segnaposto_rimasti': segnaposto})
+    esito('pagine', not (mancanti or altre or segnaposto),
+          {'mancanti': mancanti, 'altre_istruzioni': altre, 'segnaposto_rimasti': segnaposto})
 
     guide = list(desktop.rglob('GUIDA.md'))
     if (strumento / 'config.json').is_file():
@@ -157,10 +159,14 @@ def verifica(cartella, strumento=None):
         raggiunte = [v for v in visti['visited'] if v.endswith('GUIDA.md')]
         esito('link', not visti['issues'] and len(raggiunte) == len(guide) >= 3,
               {'problemi': visti['issues'][:10], 'guide': len(guide), 'raggiunte': len(raggiunte)})
-        with closing(sqlite3.connect(Path(config['database']).as_uri() + '?mode=ro', uri=True)) as con:
-            radici = con.execute('SELECT path, errors FROM roots').fetchall()
-        base = [r for r in radici if os.path.normcase(r[0]) == os.path.normcase(str(desktop.resolve()))]
-        esito('base', base and base[0][1] == '[]', f'{len(radici)} radici nel registro')
+        registro = Path(config['database'])
+        if registro.is_file():
+            with closing(sqlite3.connect(registro.as_uri() + '?mode=ro', uri=True)) as con:
+                radici = con.execute('SELECT path, errors FROM roots').fetchall()
+            base = [r for r in radici if os.path.normcase(r[0]) == os.path.normcase(str(desktop.resolve()))]
+            esito('base', base and base[0][1] == '[]', f'{len(radici)} radici nel registro')
+        else:
+            esito('base', False, f'manca il registro {registro}: nessuna scansione')
     else:
         esito('link', False, f'manca {strumento / "config.json"}')
         esito('base', False, 'nessuna configurazione')
@@ -176,6 +182,7 @@ def verifica(cartella, strumento=None):
 
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest='comando', required=True)
     p = sub.add_parser('genera'); p.add_argument('cartella', type=Path)
@@ -191,4 +198,8 @@ def main():
     return int(not out['ok'])
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        print(json.dumps({'error': str(exc)}, ensure_ascii=False), file=sys.stderr)
+        raise SystemExit(2)

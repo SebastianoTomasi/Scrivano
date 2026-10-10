@@ -27,7 +27,7 @@ Per aggiornare il sistema scrivi all'agente *aggiorna Scrivano*.
 - **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
 - **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
 - **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
-- **Disinstallare.** Cancella `Documenti\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md`, le `GUIDA.md` delle cartelle ed eventualmente `.codex-root`. Il riordino resta.
+- **Disinstallare.** Cancella `Documenti\Scrivano` e, se c'è, `%LOCALAPPDATA%\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
 
 ## Per l'agente
 
@@ -53,25 +53,29 @@ Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-inst
 | `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
 | `python controlla.py links` | Controlla link locali e ancore Markdown |
 
-Gli ID sono esempi. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
+Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows non distingue maiuscole e minuscole. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
 ### Configurazione
 
-Parti da [config.example.json](./config.example.json):
+Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione.
 
 - `desktop`: radice dell'archivio da cui parte `links`.
-- `database`: registro SQLite; se relativo, è risolto rispetto al file di configurazione.
+- `database`: registro SQLite, di norma `.stato/registro.sqlite`; in una cartella locale, non sincronizzata.
 - `roots`: radici osservate, ognuna con `id` e `path`. `depth: N` osserva N livelli sotto la radice; `recursive: false` equivale a 1.
-- `exclude_dirs`, `exclude_paths`, `exclude_files`: nomi di cartella, percorsi relativi e nomi di file da saltare, con caratteri jolly.
+- `exclude_dirs`: nomi esatti da saltare a qualsiasi livello, di cartelle o di file.
+- `exclude_files`: nomi con i caratteri jolly `*` e `?`, confrontati con l'ultima parte di ogni percorso: valgono anche per le cartelle, quindi `*passw*` salta pure una cartella `Password`.
+- `exclude_paths`: percorsi relativi a ciascuna radice, con gli stessi caratteri jolly.
 
-Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati e conserva i pendenti. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
+Le esclusioni non distinguono maiuscole e minuscole.
+
+Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati; i loro eventi pendenti restano, e `review` li chiude senza ricontrollare il file. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
 
 ### Ciclo di revisione
 
 1. `scan` registra aggiunte, modifiche e cancellazioni, incluse le cartelle vuote. La prima scansione di una radice crea solo la base osservata e non dichiara letti i documenti.
 2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate.
 3. L'agente legge i file, aggiorna le note e riesegue `scan`: anche le note modificate generano eventi.
-4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla.
+4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla. Gli eventi di percorsi non più osservati (esclusi, oltre la profondità o di una radice tolta dalla configurazione) si chiudono senza ricontrollo.
 
 Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le note di `review` restano nella tabella `events`.
 
@@ -81,7 +85,7 @@ Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le
 
 | Comando | Effetto |
 | --- | --- |
-| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa |
+| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
 | `python riordina.py esegui piano.json --prova` | Controlla il piano senza spostare nulla |
 | `python riordina.py esegui piano.json` | Esegue il piano |
 | `python riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
@@ -97,9 +101,9 @@ Il piano è un JSON con la radice, le mosse e, se servono, le cartelle-contenito
 
 - Le mosse descrivono l'albero di partenza: origini e destinazioni non si ripetono, non si sovrappongono e restano dentro la radice. Le cartelle mancanti vengono create. Un cambio di sole maiuscole passa da un nome intermedio, in due piani.
 - Dopo le mosse, ogni cartella di `vuote` rimasta davvero vuota viene tolta; una con qualcosa dentro resta e compare in `cartelle_rimaste`.
-- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction; i collegamenti `.lnk` e `.url` sono file normali.
-- Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse già fatte e riprende.
-- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
+- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction, insieme a ciò che si raggiunge attraverso di loro; i collegamenti `.lnk` e `.url` sono file normali.
+- Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse annotate nel giornale e già compiute, cioè con l'origine sparita e la destinazione presente, e riprende. La stessa situazione senza traccia nel giornale è un problema del piano.
+- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita: ogni piano ha il suo giornale, quindi una correzione successiva va in un piano nuovo, con un altro nome. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
 - `riordina.lock`, accanto al piano, impedisce due esecuzioni insieme. Se resta dopo un'interruzione, verifica lo stato della cartella e poi cancellalo.
 - L'esecuzione confronta il numero di file prima e dopo, contando anche l'interno di `.git` e simili, che l'inventario invece salta: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
 
@@ -111,13 +115,14 @@ Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento d
 | --- | --- |
 | Dimensione e timestamp invariati | La scansione veloce può perdere l'edit; usa `--full` se sospetto |
 | File solo nel cloud (OneDrive) | Confrontati su dimensione e data senza leggerli, quindi senza scaricarli; niente suggerimenti di rinomina |
+| Registro in una cartella sincronizzata (OneDrive) | Il client può bloccarlo mentre lo carica o crearne copie in conflitto: tienilo in una cartella locale, con `database` assoluto, per esempio in `%LOCALAPPDATA%\Scrivano` |
 | File creato e cancellato tra scansioni | Non osservabile; il registro non è un backup né una cronologia dei contenuti |
-| Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate |
+| Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate. Finché l'errore resta, `review` rifiuta gli eventi di quella radice: correggi la causa o escludi il percorso |
 | Eccezione o interruzione prima del commit | Annulla la transazione; ripeti la scansione |
 | Scansioni/revisioni concorrenti | Scritture serializzate; in caso di lock oltre 15 secondi, riprova |
 | Autore o significato di una modifica | Non rilevati dallo strumento |
 
-I comandi restituiscono codice non zero in caso di errore; `links` anche quando trova collegamenti rotti, `riordina.py` anche quando il piano ha problemi o il conteggio dei file cambia. Il controllo link parte da `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` nella radice `desktop` e segue i Markdown locali collegati, saltando le cartelle `Archivio` e i percorsi esclusi dalla configurazione. Non trova pagine isolate né verifica URL remoti o contenuti.
+I comandi restituiscono codice non zero in caso di errore; `scan` anche quando una radice ha errori, `links` anche quando trova collegamenti rotti, `riordina.py` anche quando il piano ha problemi, il conteggio dei file cambia o l'inventario non legge qualcosa. Il controllo link parte da `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` nella radice `desktop`, segnala quelle mancanti e segue i Markdown locali collegati, saltando le cartelle `Archivio`, i percorsi esclusi dalla configurazione e i blocchi di codice. Non trova pagine isolate né verifica URL remoti o contenuti.
 
 ### Test
 

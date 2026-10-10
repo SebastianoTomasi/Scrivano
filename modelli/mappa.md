@@ -10,7 +10,7 @@ Scegli dalla domanda, poi apri la guida del dominio: confine, regole e ingressi.
 
 | Percorso | Uso |
 | --- | --- |
-| [{{nome della cartella}}]({{percorso assoluto}}) | {{a cosa serve e come cercarci}} |
+| [{{nome della cartella}}](<{{percorso assoluto}}>) | {{a cosa serve e come cercarci}} |
 
 ## Domande trasversali
 
