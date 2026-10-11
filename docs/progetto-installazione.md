@@ -16,14 +16,15 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 
 ## Ambiente
 
-- Windows 11, Claude Code o Codex, tutto in italiano.
-- Python 3.10+: se manca, l'agente propone di installarlo con `winget`. Git se presente, altrimenti lo zip del repository.
-- Il Desktop è quello reale, anche quando Windows lo reindirizza su OneDrive. I collegamenti di `Public\Desktop` restano fuori.
+- Windows 11 o macOS, Claude Code o Codex, tutto in italiano.
+- Python 3.10+: se manca, l'agente propone di installarlo, con `winget` su Windows, da python.org o con Homebrew su macOS, dove il `python3` di Apple è spesso la 3.9. Le pagine del Desktop chiamano Python con `{{python}}`: `python` su Windows, il percorso completo su macOS. Git se presente, altrimenti lo zip del repository.
+- Il Desktop è quello reale, anche quando Windows lo reindirizza su OneDrive o macOS lo tiene su iCloud. I collegamenti di `Public\Desktop` restano fuori.
+- Su macOS il sistema chiede il permesso di leggere Scrivania, Documenti e Download per l'app da cui parte l'agente: l'agente avvisa prima e, se il permesso manca, dice dove darlo.
 - Modalità consigliata: auto in Claude Code, accesso completo in Codex. Il setup non scrive regole di permesso.
 
 ## Dove sta cosa
 
-- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella. Se Documenti è sincronizzato da OneDrive, il registro va in `%LOCALAPPDATA%\Scrivano`: un database che cambia a ogni sessione non sta bene in una cartella sincronizzata.
+- **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella. Se Documenti è sincronizzato da OneDrive o da iCloud, il registro va in `%LOCALAPPDATA%\Scrivano`, su macOS in `~/Library/Application Support/Scrivano`: un database che cambia a ogni sessione non sta bene in una cartella sincronizzata.
 - **Desktop**, radice dell'archivio: `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` in radice; in ogni dominio una `GUIDA.md` con confine, regole locali, ingressi e copertura. Una mappa separata si aggiunge solo quando il dominio cresce. `.codex-root` solo se l'utente usa Codex.
 - **Un solo `AGENTS.md`.** Le guide di dominio sono md normali raggiunti dalla mappa: Codex non carica gli `AGENTS.md` sotto la cartella di avvio, mentre Claude li caricherebbe solo quando legge un file lì dentro. Un link esplicito funziona allo stesso modo con entrambi.
 - **Nient'altro oltre all'archivio**: nessuna skill sul Desktop, nessun puntatore in `~/.claude` o `~/.codex`. Per le cose personali l'utente apre l'agente sul Desktop.
@@ -37,7 +38,7 @@ La fa l'agente seguendo `INSTALLA.md`, a cui rimanda la parte del README dedicat
 2. **Controlli.** Python, percorso reale del Desktop, eventuali `CLAUDE.md`, `CLAUDE.local.md` o `.claude\CLAUDE.md` nel Desktop o più in alto: farebbero ignorare `AGENTS.md` a Claude Code, che lo legge dalla versione 2.1.277.
 3. **Analisi.** `riordina.py inventario` riassume il Desktop. L'agente legge quello che gli serve; chiavi, `.env` e password le segnala senza leggerle né spostarle.
 4. **Proposta.** Domini dalla tassonomia di riferimento, adattata al materiale. Poche domande concrete, tante quante richiede il disordine. Livello consigliato: completo, leggero (solo file sparsi e collegamenti) o nessuno (domini e mappe sulle cartelle esistenti). L'utente approva il riassunto, non l'elenco dettagliato.
-5. **Riordino.** `riordina.py esegui` sul piano. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella; le cartelle-contenitore anonime ("Nuova cartella") si svuotano solo con approvazione e, rimaste vuote, si tolgono; i collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide qui: dopo restano fermi, e uno con un ambiente virtuale resta dov'è.
+5. **Riordino.** `riordina.py esegui` sul piano. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella; le cartelle-contenitore anonime ("Nuova cartella") si svuotano solo con approvazione e, rimaste vuote o con i soli metadati che il sistema rigenera, si tolgono; i collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide qui: dopo restano fermi, e uno con un ambiente virtuale resta dov'è.
 6. **Collaudo.** L'utente guarda il risultato e corregge a parole; ogni correzione diventa un piccolo piano in più. `annulla` resta disponibile.
 7. **Pagine.** Guide e mappa dai modelli: solo lo scheletro, con copertura "censito". `config.json` con esclusioni e profondità decise dall'inventario, poi la prima scansione, che arriva sempre dopo il riordino.
 8. **Chiusura.** In chat, le quattro cose da sapere: aprire l'agente sul Desktop, dove mettere i file nuovi, cosa chiedere, a cosa serve la coda. Poi l'offerta di interpretare subito un dominio.

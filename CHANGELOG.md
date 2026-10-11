@@ -2,6 +2,25 @@
 
 Voci per data, dalla più recente, una per data: le modifiche dello stesso giorno si aggiungono alla sua voce. La data fa da versione. Un'istanza registra quella dei suoi modelli e, aggiornandosi, rilegge anche la voce di quel giorno, che nel frattempo può essersi allungata: per questo le azioni si scrivono in modo che ripeterle non faccia danni. Ogni voce dice cosa cambia; **Azioni per l'istanza** dice cosa adattare in un'installazione già presente, seguendo [AGGIORNA.md](./AGGIORNA.md).
 
+## 2026-10-11
+
+Installazione e uso su macOS.
+
+- `controlla.py`: riconosce anche su macOS i file solo nel cloud, i file "dataless" di iCloud e degli altri File Provider, che prima la scansione leggeva e quindi scaricava; su macOS, come su Windows, `--prefix` non distingue maiuscole e minuscole; prefissi ed esclusioni valgono anche per i nomi con gli accenti scomposti (NFD); `~` nei percorsi della configurazione vale la cartella dell'utente.
+- `riordina.py`: le stesse regole per file solo nel cloud, maiuscole e accenti dei piani. L'inventario non entra nei pacchetti macOS, che elenca in `pacchetti`, tralascia `.DS_Store` e `Thumbs.db` e non conta come segreto un `.key` che è uno zip, cioè una presentazione Keynote. Una cartella di `vuote` con dentro solo `.DS_Store` o `Thumbs.db` si toglie, cancellandoli dopo averli annotati nel giornale; `annulla` toglie allo stesso modo le cartelle create dal piano, e il conteggio dei file lascia fuori quei metadati.
+- Con un Python più vecchio della 3.10, come il `python3` di Apple, i due script lo dicono invece di fallire a metà.
+- `config.example.json`: esclude `.DS_Store` e `.localized`; non esclude più `*.key`, che sul Mac sono presentazioni Keynote: le chiavi vere segnalate dall'inventario si escludono per percorso.
+- Modelli: in `AGENTS.md` e `MANUTENZIONE.md` i comandi chiamano Python con `{{python}}`, `python` su Windows e il percorso completo su macOS, in blocchi di codice senza linguaggio; nel catalogo, `Collegamenti` comprende alias del Finder e `.webloc`.
+- Procedure: `INSTALLA.md` vale anche per macOS, con cartelle reali e iCloud, permessi di accesso a Scrivania, Documenti e Download, Python da python.org o Homebrew chiamato con il percorso completo, zip al posto di git se mancano gli strumenti per sviluppatori, screenshot sulla Scrivania e registro in `~/Library/Application Support/Scrivano` se Documenti è su iCloud; i segreti dell'inventario che le esclusioni del modello non coprono vanno in `exclude_paths`.
+- `tests/desktop_finto.py genera --mac`: Desktop finto di un Mac, per le prove complete.
+
+**Azioni per l'istanza:**
+
+- In `config.json` aggiungi a `exclude_files` `.DS_Store` e `.localized`, se mancano, e annotalo in «Copertura del rilevatore» di `MANUTENZIONE.md`. Dopo la scansione chiudi con una nota gli eventi pendenti di quei file.
+- Se `exclude_files` contiene `*.key` e l'istanza ha presentazioni Keynote, metti in `exclude_paths` i `.key` che `riordina.py inventario` segnala tra i `segreti`, poi togli `*.key` e annota la scelta in «Copertura del rilevatore». Altrimenti lascia `*.key` dov'è.
+- Su macOS, se nei comandi di `AGENTS.md` e `MANUTENZIONE.md` `python` non risponde con Python 3.10 o successivo, sostituiscilo con il percorso completo di quello giusto. Su Windows i comandi restano `python`.
+- Su macOS, se Documenti è su iCloud e `database` sta ancora nello strumento, a scansioni ferme sposta il registro in `~/Library/Application Support/Scrivano/registro.sqlite`, insieme all'eventuale `registro.sqlite-journal`; poi scrivi in `database` il nuovo percorso assoluto e aggiorna la riga «Strumento» di «Questa istanza» in `AGENTS.md`.
+
 ## 2026-10-10
 
 Revisione e rifinitura.

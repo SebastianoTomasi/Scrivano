@@ -72,10 +72,10 @@ Per ogni dominio: cosa possiede, a chi rimanda, le regole locali da riportare ne
 
 ### Collegamenti
 
-- **Possiede:** collegamenti `.lnk` e `.url` ad applicazioni e siti; documenti, dati ed eseguibili appartengono agli altri domini.
+- **Possiede:** collegamenti ad applicazioni e siti: `.lnk` e `.url` su Windows, alias del Finder e `.webloc` su macOS; documenti, dati ed eseguibili appartengono agli altri domini.
 - **Regole locali:**
   - La presenza di un collegamento non prova che l'applicazione sia ancora installata.
-  - I collegamenti usati ogni giorno possono restare nella radice del Desktop; quelli di `Public\Desktop` sono fuori perimetro.
+  - I collegamenti usati ogni giorno possono restare nella radice del Desktop; su Windows quelli di `Public\Desktop` sono fuori perimetro.
   - Un collegamento non risolvibile si segnala all'utente, invece di eliminarlo.
 
 ## Domini facoltativi

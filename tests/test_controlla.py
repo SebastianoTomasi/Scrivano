@@ -159,9 +159,16 @@ class DetectorTests(unittest.TestCase):
         self.assertEqual(m.pending(self.config,prefix='Foto/')['matched'],3)
         self.assertEqual(m.pending(self.config,prefix='Foto\\Mare')['matched'],2)
         self.assertEqual(m.pending(self.config,prefix='/Foto')['matched'],3)
-        if os.name=='nt': self.assertEqual(m.pending(self.config,prefix='foto/mare')['matched'],2)
+        if m.NOCASE: self.assertEqual(m.pending(self.config,prefix='foto/mare')['matched'],2)
         self.assertEqual(m.review(self.config,[],'foto censite',prefix='Foto\\')['reviewed'],3)
         self.assertEqual([r['path'] for r in self.items()],['Fotografie.md'])
+
+    def test_accent_form_does_not_matter(self):
+        # macOS: un nome può avere gli accenti scomposti (NFD), mentre prefissi ed esclusioni si digitano composti.
+        self.scan(); self.put('Università/esame.pdf','x'); self.scan()
+        self.assertEqual(m.pending(self.config,prefix='Università')['matched'],2)
+        self.config['exclude_paths']=['Università']; self.put('Università/altro.pdf','y'); self.scan()
+        self.assertEqual(m.pending(self.config)['matched'],2)
 
     def test_repeated_id_is_reviewed_once(self):
         self.scan(); self.put('a.md','a'); self.scan(); event=self.items()[0]['id']
@@ -223,6 +230,17 @@ class DetectorTests(unittest.TestCase):
             self.scan(); m.review(self.config,[self.items()[0]['id']],'censito')
         self.assertEqual(self.items(),[])
 
+    def test_dataless_files_are_not_read(self):
+        # macOS: un file "dataless" di iCloud si scaricherebbe leggendolo; il flag sta in st_flags.
+        self.put('video.mp4','contenuto'); real=Path.stat
+        def dataless(path,**kw):
+            info=real(path,**kw)
+            return types.SimpleNamespace(st_mode=info.st_mode,st_size=info.st_size,st_mtime_ns=info.st_mtime_ns,
+                                         st_flags=0x40000000)
+        with patch.object(m,'DATALESS',0x40000000),patch.object(Path,'stat',dataless),patch.object(m,'digest',side_effect=never):
+            self.scan(); self.scan(full=True)
+        self.assertEqual(self.items(),[])
+
     def test_cloud_files_get_no_rename_suggestion(self):
         # Senza impronta una cancellazione e un'aggiunta qualsiasi non sono un rinomino.
         a=self.put('a.pdf','uno'); offline(a); self.scan(); a.unlink()
@@ -256,6 +274,12 @@ class DetectorTests(unittest.TestCase):
         self.config['exclude_files']=example['exclude_files']; self.scan()
         self.put('~$Relazione.docx','lock'); self.put('.~lock.Bilancio.ods#','lock'); self.put('Relazione.docx','testo')
         self.scan(); self.assertEqual([r['path'] for r in self.items()],['Relazione.docx'])
+
+    def test_example_config_skips_finder_metadata_and_keeps_keynote(self):
+        example=json.loads((Path(m.__file__).parent/'config.example.json').read_text(encoding='utf-8'))
+        self.config['exclude_files']=example['exclude_files']; self.scan()
+        self.put('.DS_Store','finder'); self.put('.localized',''); self.put('Tesi.key','PK'); self.scan()
+        self.assertEqual([r['path'] for r in self.items()],['Tesi.key'])
 
     def test_exclusions_and_hidden_instructions(self):
         self.scan(); self.put('node_modules/ignored.js','code'); self.put('.env','test')
@@ -342,6 +366,14 @@ class DetectorTests(unittest.TestCase):
         path.write_text(json.dumps({'database':str(local),'roots':[{'id':'test','path':str(self.root)}]}),encoding='utf-8')
         config=m.load_config(path); self.assertEqual(config['database'],str(local))
         m.scan(config); self.assertTrue(local.is_file())
+
+    def test_config_expands_home(self):
+        # Su macOS il registro fuori da iCloud si scrive comodamente come ~/Library/...
+        path=self.base/'config.json'
+        path.write_text(json.dumps({'database':'~/Locale/registro.sqlite','roots':[{'id':'test','path':'~/files'}]}),encoding='utf-8')
+        with patch.dict(os.environ,{'HOME':str(self.base),'USERPROFILE':str(self.base)}): config=m.load_config(path)
+        self.assertEqual((config['roots'][0]['path'],config['database']),
+                         (str(self.root.resolve()),str(self.base/'Locale'/'registro.sqlite')))
 
     def test_invalid_config_is_rejected(self):
         path=self.base/'config.json'; roots=[{'id':'x','path':'.'}]

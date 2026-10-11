@@ -1,7 +1,8 @@
 """Inventario di una cartella e riordino secondo un piano approvato. Solo libreria standard; nessuna rete.
 
 Lo script non decide nulla: l'agente scrive il piano, l'utente lo approva, lo script lo esegue.
-Non sovrascrive, non cancella, si ferma al primo problema e annota ogni mossa nel giornale.
+Non sovrascrive, non cancella (salvo i metadati che il sistema rigenera, nelle cartelle da togliere),
+si ferma al primo problema e annota ogni mossa nel giornale.
 """
 from __future__ import annotations
 import argparse
@@ -16,14 +17,25 @@ from pathlib import Path
 import stat
 import sys
 import time
+import unicodedata
 
 # Attributi Windows dei file solo nel cloud: leggerli li scaricherebbe.
 CLOUD = 0x1000 | 0x40000 | 0x400000
+# Flag macOS dei file "dataless" di iCloud e degli altri File Provider; stat.SF_DATALESS solo da Python 3.13.
+DATALESS = 0x40000000 if sys.platform == 'darwin' else 0
 # Bit "name surrogate" del reparse tag: il reparse point rimanda a un altro percorso (junction, link WSL).
 SURROGATE = 0x20000000
+# File system che di norma non distinguono maiuscole e minuscole: NTFS su Windows, APFS su macOS.
+NOCASE = os.name == 'nt' or sys.platform == 'darwin'
+# Metadati che Finder ed Esplora risorse rigenerano: non contano come contenuto di una cartella.
+METADATA = {'.ds_store', 'thumbs.db'}
 # Cartelle trattate come unità: l'inventario non scende al loro interno.
 HEAVY = {n.casefold() for n in ('.git', '.hg', '.svn', 'node_modules', '.venv', 'venv', '__pycache__',
                                 '.pytest_cache', '.mypy_cache', '.cache', '.uv-cache', '.tox', '.next')}
+# Pacchetti macOS: cartelle che il Finder mostra come un solo documento o un'app; si spostano intere.
+PACKAGES = {'.app', '.bundle', '.framework', '.plugin', '.workflow', '.photoslibrary', '.photolibrary',
+            '.musiclibrary', '.tvlibrary', '.imovielibrary', '.theater', '.fcpbundle', '.logicx', '.band',
+            '.rtfd', '.pages', '.numbers', '.key', '.xcodeproj', '.xcworkspace', '.playground', '.sparsebundle'}
 # Segnali di cartella-progetto: si sposta intera o resta dov'è.
 PROJECT = {n.casefold() for n in ('.git', '.venv', 'venv', 'node_modules', 'package.json', 'pyproject.toml',
                                   'requirements.txt', 'Cargo.toml', 'go.mod')}
@@ -42,10 +54,25 @@ def is_link(info):
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_reparse_tag', 0) & SURROGATE)
 
 def is_cloud(info):
-    return bool(getattr(info, 'st_file_attributes', 0) & CLOUD)
+    return bool(getattr(info, 'st_file_attributes', 0) & CLOUD or getattr(info, 'st_flags', 0) & DATALESS)
 
-def is_secret(name):
-    return any(fnmatch.fnmatchcase(name.casefold(), p) for p in SECRETS)
+def is_package(name):
+    return Path(name).suffix.casefold() in PACKAGES
+
+def keynote(path):
+    # Le chiavi sono testo (PEM) o DER, le presentazioni Keynote sono zip: bastano i primi byte,
+    # letti dallo script e mostrati a nessuno.
+    try:
+        with open(path, 'rb') as f:
+            return f.read(4) == b'PK\x03\x04'
+    except OSError:
+        return False
+
+def is_secret(name, path, info):
+    # Un .key che è uno zip è una presentazione Keynote; uno solo nel cloud non si legge e resta un segreto.
+    if not any(fnmatch.fnmatchcase(name.casefold(), p) for p in SECRETS):
+        return False
+    return not (name.casefold().endswith('.key') and not is_cloud(info) and keynote(path))
 
 def digest(path):
     h = hashlib.sha256()
@@ -73,13 +100,15 @@ def add_file(rel, path, info, acc, state):
     heapq.heappush(state['grandi'], (size, rel))
     if len(state['grandi']) > 10:
         heapq.heappop(state['grandi'])
-    if is_secret(name):
+    secret = is_secret(name, path, info)
+    if secret:
         state['segreti'].append(rel)
     if is_cloud(info):
         acc['solo_cloud'] += 1
         state['totale']['solo_cloud'] += 1
-    elif size and not is_secret(name):
+    elif size and not secret:
         state['per_dimensione'].setdefault(size, []).append((rel, path))
+    return secret
 
 def visit(folder, rel, level, depth, acc, state):
     try:
@@ -106,11 +135,13 @@ def visit(folder, rel, level, depth, acc, state):
             if entry.name.casefold() in HEAVY:
                 acc['pesanti'].add(entry.name)
                 state['pesanti'].add(entry.name)
+            elif is_package(entry.name):
+                state['pacchetti'].append(child)
             elif depth is None or level + 1 < depth:
                 visit(entry.path, child, level + 1, depth, acc, state)
             else:
                 acc['parziale'] = True
-        elif stat.S_ISREG(info.st_mode):
+        elif stat.S_ISREG(info.st_mode) and entry.name.casefold() not in METADATA:
             add_file(child, entry.path, info, acc, state)
 
 def summary(acc):
@@ -143,14 +174,14 @@ def duplicates(by_size, limit=20):
     return groups[:limit]
 
 def inventory(root, depth=None, limit=300):
-    base = Path(root).resolve()
+    base = Path(root).expanduser().resolve()
     if not base.is_dir():
         raise ValueError(f'Cartella non trovata: {root}')
     if depth is not None and depth < 1:
         raise ValueError('Profondità non valida: usare un intero >= 1')
     state = {'totale': {'file': 0, 'cartelle': 0, 'byte': 0, 'solo_cloud': 0}, 'estensioni': Counter(),
-             'progetti': [], 'segreti': [], 'link': [], 'pesanti': set(), 'errori': [], 'grandi': [],
-             'per_dimensione': {}}
+             'progetti': [], 'pacchetti': [], 'segreti': [], 'link': [], 'pesanti': set(), 'errori': [],
+             'grandi': [], 'per_dimensione': {}}
     with os.scandir(base) as listing:
         entries = sorted(listing, key=lambda e: e.name.casefold())
     items = []
@@ -170,6 +201,9 @@ def inventory(root, depth=None, limit=300):
             if name.casefold() in HEAVY:
                 acc['pesanti'].add(name)
                 state['pesanti'].add(name)
+            elif is_package(name):
+                state['pacchetti'].append(name)
+                item['pacchetto'] = True
             elif depth is None or depth > 1:
                 visit(entry.path, name, 1, depth, acc, state)
             else:
@@ -178,17 +212,18 @@ def inventory(root, depth=None, limit=300):
             if name in state['progetti']:
                 item['progetto'] = True
             items.append(item)
-        elif stat.S_ISREG(info.st_mode):
-            add_file(name, entry.path, info, tally(), state)
+        elif stat.S_ISREG(info.st_mode) and name.casefold() not in METADATA:
+            secret = add_file(name, entry.path, info, tally(), state)
             item = {'nome': name, 'tipo': 'file', 'byte': info.st_size, 'modificato': day(info.st_mtime_ns)}
             if is_cloud(info):
                 item['solo_cloud'] = True
-            if is_secret(name):
+            if secret:
                 item['segreto'] = True
             items.append(item)
     return {'radice': str(base), 'totale': state['totale'], 'voci': items[:limit],
             'altre_voci': max(0, len(items) - limit), 'estensioni': dict(state['estensioni'].most_common(15)),
-            'progetti': state['progetti'][:50], 'segreti': state['segreti'][:50], 'link': state['link'][:50],
+            'progetti': state['progetti'][:50], 'pacchetti': state['pacchetti'][:50],
+            'segreti': state['segreti'][:50], 'link': state['link'][:50],
             'duplicati': duplicates(state['per_dimensione']),
             'grandi': [{'percorso': rel, 'byte': size} for size, rel in sorted(state['grandi'], reverse=True)],
             'esclusioni_suggerite': sorted(state['pesanti'], key=str.casefold), 'errori': state['errori'][:50]}
@@ -206,7 +241,7 @@ def load_plan(path):
     plan = json.loads(Path(path).read_text(encoding='utf-8-sig'))
     if not isinstance(plan, dict) or 'radice' not in plan or not isinstance(plan.get('mosse'), list):
         raise ValueError('Piano non valido: servono "radice" e "mosse"')
-    root = Path(plan['radice']).resolve()
+    root = Path(plan['radice']).expanduser().resolve()
     if not root.is_dir():
         raise ValueError(f'Radice del piano non trovata: {root}')
     moves = []
@@ -235,7 +270,10 @@ def read_journal(journal):
     return entries
 
 def key(rel):
-    return rel.casefold() if os.name == 'nt' else rel
+    # Percorsi confrontati come li confronta il file system: su macOS gli accenti possono arrivare
+    # scomposti (NFD); su Windows e macOS le maiuscole non contano.
+    rel = unicodedata.normalize('NFC', rel)
+    return rel.casefold() if NOCASE else rel
 
 def ancestors(rel):
     # 'a/b/c' -> ['a', 'a/b', 'a/b/c']
@@ -296,8 +334,17 @@ def check(root, moves, empties=(), noted=frozenset()):
 def missing_parents(root, rel):
     return [f for f in ancestors(rel)[:-1] if not os.path.lexists(root / f)]
 
+def only_metadata(folder):
+    # Contenuto di una cartella fatta solo di metadati rigenerati dal sistema (anche di nessuno), altrimenti None.
+    with os.scandir(folder) as listing:
+        entries = list(listing)
+    if all(e.name.casefold() in METADATA and e.is_file(follow_symlinks=False) for e in entries):
+        return entries
+    return None
+
 def count_files(root):
     # File sotto la radice, senza seguire link e junction: gli spostamenti non devono cambiarne il numero.
+    # I metadati restano fuori: il Finder li crea quando vuole, e vuote li toglie.
     total, stack = 0, [root]
     while stack:
         try:
@@ -311,7 +358,7 @@ def count_files(root):
                     continue
                 if entry.is_dir(follow_symlinks=False):
                     stack.append(entry.path)
-                elif entry.is_file(follow_symlinks=False):
+                elif entry.is_file(follow_symlinks=False) and entry.name.casefold() not in METADATA:
                     total += 1
             except OSError:
                 continue
@@ -366,15 +413,21 @@ def execute(plan_path, dry_run=False):
                 error = {'da': src, 'a': dst, 'errore': str(exc)}
                 break
         for folder in empties if error is None else ():
-            # Solo cartelle rimaste davvero vuote: una con qualcosa dentro resta e si segnala.
+            # Solo cartelle rimaste vuote, a parte i metadati: una con qualcosa dentro resta e si segnala.
             if not os.path.lexists(root / folder):
                 continue
             try:
-                with os.scandir(root / folder) as listing:
-                    if next(listing, None) is not None:
-                        kept.append(folder)
-                        continue
-                note(log, rimossa=folder)
+                metadata = only_metadata(root / folder)
+                if metadata is None:
+                    kept.append(folder)
+                    continue
+                note(log, rimossa=folder, metadati=sorted(e.name for e in metadata))
+                try:
+                    for entry in metadata:
+                        os.unlink(entry.path)
+                except OSError:
+                    kept.append(folder)  # un metadato in uso, come un Thumbs.db aperto: la cartella resta
+                    continue
                 os.rmdir(root / folder)
                 removed.append(folder)
             except OSError as exc:
@@ -406,11 +459,16 @@ def undo(plan_path):
                         break
                 continue
             if 'cartella' in entry:
+                # Una cartella creata dal piano si toglie se è rimasta vuota, a parte i metadati.
                 try:
-                    os.rmdir(root / entry['cartella'])
-                    removed += 1
+                    metadata = only_metadata(root / entry['cartella'])
+                    if metadata is not None:
+                        for item in metadata:
+                            os.unlink(item.path)
+                        os.rmdir(root / entry['cartella'])
+                        removed += 1
                 except OSError:
-                    pass  # non vuota o già assente: resta dov'è
+                    pass  # già assente o riempita nel frattempo: resta dov'è
                 continue
             src, dst = root / entry['da'], root / entry['a']
             has_src, has_dst = os.path.lexists(src), os.path.lexists(dst)
@@ -458,6 +516,10 @@ def main():
     return code
 
 if __name__ == '__main__':
+    if sys.version_info < (3, 10):
+        # Su macOS il python3 degli strumenti per sviluppatori di Apple è spesso la 3.9.
+        print(json.dumps({'error': f'Serve Python 3.10 o successivo, non {sys.version.split()[0]}'}), file=sys.stderr)
+        raise SystemExit(2)
     try:
         raise SystemExit(main())
     except (OSError, ValueError) as exc:

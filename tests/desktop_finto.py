@@ -1,11 +1,12 @@
 """Desktop disordinato finto per provare l'installazione, e verifica del risultato.
 
-    python tests/desktop_finto.py genera CARTELLA [--strumento REPOSITORY] [--seme N]
+    python tests/desktop_finto.py genera CARTELLA [--strumento REPOSITORY] [--seme N] [--mac]
     python tests/desktop_finto.py verifica CARTELLA [--strumento PERCORSO]
 
 `genera` crea CARTELLA/Desktop, CARTELLA/Documenti e CARTELLA/Download e scrive
 CARTELLA/manifesto.json con l'impronta di ogni file creato. Con --strumento copia
-il repository in CARTELLA/Documenti/Scrivano, come uno zip scompattato.
+il repository in CARTELLA/Documenti/Scrivano, come uno zip scompattato. Con --mac il
+Desktop è quello di un Mac: .DS_Store, .localized, Keynote, pacchetti, niente .lnk né .exe.
 `verifica` controlla un'installazione fatta su quel Desktop. Solo libreria standard.
 """
 from __future__ import annotations
@@ -27,6 +28,10 @@ PAGINE = ('AGENTS.md', 'MAPPA.md', 'MANUTENZIONE.md')
 SEGRETO = 'password banca.txt'
 PROGETTO = 'sito-portfolio'
 SISTEMA = 'desktop.ini'
+# Solo sul Desktop finto di un Mac.
+CHIAVE = 'chiave server.key'
+LOCALIZZATO = '.localized'
+PACCHETTO = 'Canzone.band'
 
 # Percorso relativo e giorni dall'ultima modifica.
 DESKTOP = [
@@ -63,12 +68,23 @@ DOCUMENTI = [('Scansioni/scansione001.pdf', 900), ('Lettere/lettera condominio.d
              ('Fatture 2023/fattura idraulico.pdf', 500)]
 DOWNLOAD = [('modulo iscrizione palestra.pdf', 4), ('biglietto treno.pdf', 2), ('installer_zoom.exe', 30),
             ('foto profilo.png', 15)]
+# Sul Mac: metadati del Finder, una presentazione Keynote (uno zip) accanto a una chiave vera, un pacchetto,
+# gli screenshot che macOS salva sul Desktop e i collegamenti ai siti.
+MAC = [('.DS_Store', 1), (LOCALIZZATO, 1000), ('Nuova cartella/.DS_Store', 150), ('Varie/.DS_Store', 500),
+       ('Presentazione tesi.key', 1450), (CHIAVE, 600), (f'{PACCHETTO}/projectData', 330),
+       (f'{PACCHETTO}/Media/chitarra.aif', 330), ('Screenshot 2024-03-04 alle 09.41.07.png', 25),
+       ('Screenshot 2024-03-05 alle 18.02.33.png', 24), ('Sito banca.webloc', 600)]
+MAC_DOWNLOAD = [('installer_zoom.dmg', 30)]
+SOLO_WINDOWS = ('.lnk', '.url', '.exe', SISTEMA)
 TESTI = {
     SEGRETO: 'Banca online\nutente: mario.rossi\npassword: Prova-Finta-123\n',
     SISTEMA: '[.ShellClassInfo]\nLocalizedResourceName=@%SystemRoot%\\system32\\shell32.dll,-21769\n',
     f'{PROGETTO}/.git/HEAD': 'ref: refs/heads/main\n',
     'Lista spesa.txt': 'latte\npane\nmele\ncaffè\n',
     'Ricetta tiramisù.txt': 'Tiramisù per quattro: mascarpone, uova, zucchero, savoiardi, caffè, cacao.\n',
+    LOCALIZZATO: '',
+    CHIAVE: '-----BEGIN PRIVATE KEY-----\nCHIAVE-FINTA\n-----END PRIVATE KEY-----\n',
+    'Presentazione tesi.key': b'PK\x03\x04presentazione finta',
 }
 
 def impronta(path):
@@ -78,7 +94,7 @@ def scrivi(base, voci, rng, adesso):
     contenuti = {}
     for rel, giorni in voci:
         if rel in TESTI:
-            dati = TESTI[rel].encode('utf-8')
+            dati = TESTI[rel] if isinstance(TESTI[rel], bytes) else TESTI[rel].encode('utf-8')
         elif rel in DUPLICATI:
             dati = contenuti[DUPLICATI[rel]]
         else:
@@ -91,13 +107,17 @@ def scrivi(base, voci, rng, adesso):
         os.utime(path, (quando, quando))
     return {rel: hashlib.sha256(dati).hexdigest() for rel, dati in contenuti.items()}
 
-def genera(cartella, strumento=None, seme=1):
+def genera(cartella, strumento=None, seme=1, mac=False):
     cartella = Path(cartella)
     if (cartella / 'Desktop').exists():
         raise ValueError(f'Esiste già un Desktop finto in {cartella}')
     rng, adesso = random.Random(seme), time.time()
-    manifesto = {nome: scrivi(cartella / nome, voci, rng, adesso)
-                 for nome, voci in (('Desktop', DESKTOP), ('Documenti', DOCUMENTI), ('Download', DOWNLOAD))}
+    voci = {'Desktop': DESKTOP, 'Documenti': DOCUMENTI, 'Download': DOWNLOAD}
+    if mac:
+        voci = {nome: [v for v in elenco if not v[0].endswith(SOLO_WINDOWS)] for nome, elenco in voci.items()}
+        voci['Desktop'] += MAC
+        voci['Download'] += MAC_DOWNLOAD
+    manifesto = {nome: scrivi(cartella / nome, elenco, rng, adesso) for nome, elenco in voci.items()}
     (cartella / 'manifesto.json').write_text(json.dumps(manifesto, ensure_ascii=False, indent=1), encoding='utf-8')
     if strumento:
         shutil.copytree(strumento, cartella / 'Documenti' / 'Scrivano', ignore=shutil.ignore_patterns(
@@ -129,11 +149,13 @@ def verifica(cartella, strumento=None):
         esiti[nome] = {'ok': bool(ok), 'dettaglio': dettaglio}
 
     # Nessun file perso, duplicato o alterato: le pagine del sistema sono le uniche aggiunte.
-    # Il file di password non si apre, come vuole la procedura: lo controlla solo l'esito 'segreto'.
+    # I segreti non si aprono, come vuole la procedura: li controlla solo l'esito 'segreto'.
+    # I .DS_Store sono metadati che il riordino può togliere insieme alle cartelle svuotate.
+    segreti = [s for s in (SEGRETO, CHIAVE) if s in manifesto['Desktop']]
     pagina = lambda rel: rel in PAGINE or rel == '.codex-root' or rel.rsplit('/', 1)[-1] == 'GUIDA.md'
-    salta = lambda rel: pagina(rel) or rel.rsplit('/', 1)[-1] == SEGRETO
+    salta = lambda rel: pagina(rel) or rel.rsplit('/', 1)[-1] in (*segreti, '.DS_Store')
     trovati = impronte(desktop, salta)
-    attesi = sorted(sha for rel, sha in manifesto['Desktop'].items() if rel != SEGRETO)
+    attesi = sorted(sha for rel, sha in manifesto['Desktop'].items() if not salta(rel))
     esito('contenuti', trovati == attesi, f'{len(trovati)} file sul Desktop, attesi {len(attesi)}')
     fuori = impronte(cartella / 'Documenti', lambda rel: rel.startswith('Scrivano/'))
     fuori += impronte(cartella / 'Download')
@@ -171,11 +193,15 @@ def verifica(cartella, strumento=None):
         esito('link', False, f'manca {strumento / "config.json"}')
         esito('base', False, 'nessuna configurazione')
 
-    esito('segreto', (desktop / SEGRETO).is_file(), f'{SEGRETO} resta nella radice')
-    esito('sistema', (desktop / SISTEMA).is_file(), f'{SISTEMA} resta nella radice')
+    esito('segreto', all((desktop / s).is_file() for s in segreti), f'{", ".join(segreti)} nella radice')
+    sistema = LOCALIZZATO if LOCALIZZATO in manifesto['Desktop'] else SISTEMA
+    esito('sistema', (desktop / sistema).is_file(), f'{sistema} resta nella radice')
     progetti = [p.parent.parent for p in desktop.rglob('HEAD') if p.parent.name == '.git']
     esito('progetto', any(p.name == PROGETTO and (p / 'index.html').is_file() and (p / 'stile.css').is_file()
                           for p in progetti), 'il repository si sposta intero')
+    if f'{PACCHETTO}/projectData' in manifesto['Desktop']:
+        esito('pacchetto', any((p / 'projectData').is_file() and (p / 'Media' / 'chitarra.aif').is_file()
+                               for p in desktop.rglob(PACCHETTO)), f'{PACCHETTO} si sposta intero')
     sparsi = sorted(p.name for p in desktop.iterdir() if p.is_file() and not pagina(p.name))
     return {'ok': all(e['ok'] for e in esiti.values()), 'esiti': esiti, 'radice_rimasta': sparsi,
             'pagine_markdown': len(tutte)}
@@ -187,10 +213,11 @@ def main():
     sub = parser.add_subparsers(dest='comando', required=True)
     p = sub.add_parser('genera'); p.add_argument('cartella', type=Path)
     p.add_argument('--strumento', type=Path); p.add_argument('--seme', type=int, default=1)
+    p.add_argument('--mac', action='store_true')
     p = sub.add_parser('verifica'); p.add_argument('cartella', type=Path); p.add_argument('--strumento', type=Path)
     args = parser.parse_args()
     if args.comando == 'genera':
-        manifesto = genera(args.cartella, args.strumento, args.seme)
+        manifesto = genera(args.cartella, args.strumento, args.seme, args.mac)
         print(json.dumps({nome: len(file) for nome, file in manifesto.items()}, ensure_ascii=False))
         return 0
     out = verifica(args.cartella, args.strumento)

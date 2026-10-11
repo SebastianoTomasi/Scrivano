@@ -7,9 +7,9 @@ Archivio personale distribuito per dominio. Parti da [MAPPA.md](./MAPPA.md); leg
 1. Scegli il dominio dalla mappa e leggi la sua `GUIDA.md`: confine, regole locali e ingressi. Una sottocartella con guida propria la precisa al suo interno.
 2. Una volta per sessione, rileva i cambiamenti e leggi la coda, che parte dal più recente:
 
-   ```powershell
-   python "{{strumento}}/controlla.py" scan
-   python "{{strumento}}/controlla.py" pending --limit 30
+   ```
+   {{python}} "{{strumento}}/controlla.py" scan
+   {{python}} "{{strumento}}/controlla.py" pending --limit 30
    ```
 
 3. Esamina gli eventi pertinenti e lascia pendenti gli altri. Se `total_pending` supera 50, dopo aver risposto riordina la coda, una volta per sessione: chiudi con una nota le rinomine di cartella e i gruppi che non toccano note, partendo da `summary`, e se un rumore si ripete proponi in una riga di escluderlo. Filtri, chiusure ed errori: [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).

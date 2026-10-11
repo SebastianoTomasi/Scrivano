@@ -56,6 +56,38 @@ class InventoryTests(Base):
         with patch.object(m,'digest',side_effect=AssertionError('file letto')): out=m.inventory(self.root)
         self.assertEqual(out['totale']['solo_cloud'],2); self.assertEqual(out['duplicati'],[])
 
+    def test_dataless_files_are_not_read(self):
+        # macOS: i file "dataless" di iCloud si scaricherebbero leggendoli; il flag sta in st_flags.
+        self.put('a.bin','same'); self.put('b.bin','same'); real=os.stat
+        def dataless(path,**kw):
+            info=real(path,**kw)
+            return types.SimpleNamespace(st_mode=info.st_mode,st_size=info.st_size,st_mtime_ns=info.st_mtime_ns,
+                                         st_flags=0x40000000)
+        with patch.object(m,'DATALESS',0x40000000),patch.object(m.os,'stat',dataless),\
+                patch.object(m,'digest',side_effect=AssertionError('file letto')):
+            out=m.inventory(self.root)
+        self.assertEqual((out['totale']['solo_cloud'],out['duplicati']),(2,[]))
+
+    def test_keynote_is_not_a_secret(self):
+        # Su Mac un .key è di solito una presentazione Keynote, cioè uno zip o un pacchetto; una chiave è testo.
+        (self.root/'Tesi.key').write_bytes(b'PK\x03\x04presentazione'); self.put('server.key','-----BEGIN PRIVATE KEY-----')
+        self.put('Vecchia.key/Index.apxl','pacchetto')
+        out=m.inventory(self.root); voci={v['nome']:v for v in out['voci']}
+        self.assertEqual(out['segreti'],['server.key']); self.assertNotIn('segreto',voci['Tesi.key'])
+        self.assertTrue(voci['Vecchia.key']['pacchetto'])
+
+    def test_packages_are_units(self):
+        # Pacchetti macOS: il Finder li mostra come un documento o un'app, l'inventario non ci entra.
+        self.put('Canzone.band/Media/audio.aif'); self.put('Musica/Demo.band/projectData'); self.put('Musica/nota.txt')
+        out=m.inventory(self.root); voci={v['nome']:v for v in out['voci']}
+        self.assertEqual(out['pacchetti'],['Canzone.band','Musica/Demo.band'])
+        self.assertTrue(voci['Canzone.band']['pacchetto']); self.assertEqual(out['totale']['file'],1)
+
+    def test_finder_metadata_is_ignored(self):
+        self.put('.DS_Store','finder'); self.put('Foto/.DS_Store','finder'); self.put('Foto/a.jpg','img')
+        out=m.inventory(self.root)
+        self.assertEqual((out['totale']['file'],[v['nome'] for v in out['voci']],out['duplicati']),(1,['Foto'],[]))
+
     def test_depth_limits_descent(self):
         self.put('A/B/c.txt'); voce=m.inventory(self.root,depth=2)['voci'][0]
         self.assertEqual((voce['cartelle'],voce['file'],voce['parziale']),(1,0,True))
@@ -99,9 +131,16 @@ class PlanTests(Base):
         self.assertTrue(self.exists('A/x.txt') and self.exists('y.txt'))
 
     def test_case_only_rename_needs_two_plans(self):
+        if not m.NOCASE: self.skipTest('il file system distingue le maiuscole: la rinomina è una mossa qualsiasi')
         self.put('foto/a.jpg')
         out,code=m.execute(self.plan(('foto','Foto')))
         self.assertEqual(code,1); self.assertIn('maiuscole',out['problemi'][0]['problema'])
+
+    def test_accent_forms_are_the_same_name(self):
+        # macOS: lo stesso nome può arrivare con gli accenti composti (NFC) o scomposti (NFD).
+        self.put('a.txt'); self.put('b.txt')
+        out,code=m.execute(self.plan(('a.txt','Città/a.txt'),('b.txt','Città/a.txt')),dry_run=True)
+        self.assertEqual((code,out['problemi'][0]['problema']),(1,'origine o destinazione ripetuta nel piano'))
 
     def test_accents_and_brackets(self):
         self.put('Foto [2019] Città.jpg')
@@ -180,6 +219,34 @@ class PlanTests(Base):
         m.execute(plan); out,code=m.undo(plan)
         self.assertEqual((code,out['cartelle_ricreate'],out['ripristinate']),(0,1,1))
         self.assertTrue(self.exists('Nuova cartella/a.txt')); self.assertFalse(self.exists('X'))
+
+    def test_containers_with_only_metadata_are_removed(self):
+        # Il Finder lascia un .DS_Store in ogni cartella aperta: non basta a tenerla sul Desktop.
+        self.put('Nuova cartella/a.txt'); self.put('Nuova cartella/.DS_Store','finder')
+        self.put('Varie/b.txt'); self.put('Varie/.DS_Store','finder')
+        plan=self.plan(('Nuova cartella/a.txt','X/a.txt'),vuote=['Nuova cartella','Varie'])
+        out,code=m.execute(plan)
+        self.assertEqual((code,out['cartelle_rimosse'],out['cartelle_rimaste']),(0,['Nuova cartella'],['Varie']))
+        self.assertEqual(out['conteggio']['prima'],out['conteggio']['dopo']); self.assertFalse(self.exists('Nuova cartella'))
+        giornale=(self.state/'piano.giornale.jsonl').read_text(encoding='utf-8').splitlines()
+        self.assertEqual(json.loads(giornale[-1])['metadati'],['.DS_Store'])
+        out,code=m.undo(plan)
+        self.assertEqual((code,out['cartelle_ricreate']),(0,1)); self.assertTrue(self.exists('Nuova cartella/a.txt'))
+
+    def test_metadata_in_use_keeps_the_container(self):
+        self.put('Vecchia/a.txt'); self.put('Vecchia/Thumbs.db','anteprime'); real=m.os.unlink
+        def busy(path):
+            if Path(path).name=='Thumbs.db': raise PermissionError('in uso')
+            return real(path)
+        with patch.object(m.os,'unlink',side_effect=busy):
+            out,code=m.execute(self.plan(('Vecchia/a.txt','X/a.txt'),vuote=['Vecchia']))
+        self.assertEqual((code,out['cartelle_rimaste'],out['errore']),(0,['Vecchia'],None))
+
+    def test_undo_removes_created_folders_with_metadata(self):
+        self.put('a.txt'); plan=self.plan(('a.txt','Nuova/a.txt')); m.execute(plan)
+        (self.root/'Nuova/.DS_Store').write_text('finder')
+        out,code=m.undo(plan)
+        self.assertEqual((code,out['cartelle_rimosse']),(0,1)); self.assertFalse(self.exists('Nuova'))
 
     def test_unreadable_container_is_reported(self):
         self.put('Nuova cartella/a.txt'); plan=self.plan(('Nuova cartella/a.txt','X/a.txt'),vuote=['Nuova cartella'])

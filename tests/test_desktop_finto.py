@@ -28,6 +28,15 @@ class FakeDesktopTests(unittest.TestCase):
         self.assertIn(d.SEGRETO,out['segreti']); self.assertIn(d.PROGETTO,out['progetti'])
         self.assertTrue(any('CV 2024.docx' in g['percorsi'] for g in out['duplicati']))
 
+    def test_mac_desktop(self):
+        manifesto=d.genera(self.base,mac=True)
+        self.assertIn(d.LOCALIZZATO,manifesto['Desktop']); self.assertNotIn(d.SISTEMA,manifesto['Desktop'])
+        self.assertFalse(any(rel.endswith('.lnk') for rel in manifesto['Desktop']))
+        out=r.inventory(self.base/'Desktop')
+        self.assertEqual(sorted(out['segreti']),sorted([d.CHIAVE,d.SEGRETO])); self.assertEqual(out['pacchetti'],[d.PACCHETTO])
+        esiti=d.verifica(self.base)['esiti']
+        self.assertTrue(esiti['contenuti']['ok'] and esiti['sistema']['ok'] and esiti['pacchetto']['ok'])
+
     def test_same_seed_same_desktop(self):
         self.assertEqual(d.genera(self.base,seme=7),d.genera(Path(self.temp.name)/'altra',seme=7))
 

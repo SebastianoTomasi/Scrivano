@@ -41,27 +41,27 @@ Claude Code e Codex leggono `AGENTS.md` direttamente. Niente `CLAUDE.md`, `CLAUD
 
 All'avvio segui [AGENTS.md](./AGENTS.md#avvio-del-lavoro). I comandi usano il percorso completo dello strumento, così funzionano da qualsiasi cartella senza cambiarla:
 
-```powershell
-python "{{strumento}}/controlla.py" pending --root Desktop --prefix Finanze --limit 30
+```
+{{python}} "{{strumento}}/controlla.py" pending --root Desktop --prefix Finanze --limit 30
 ```
 
 La coda parte dal cambiamento più recente. `--prefix` è il percorso relativo alla radice; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: confronta `matched` con gli elementi mostrati e aumenta il limite se serve. Gli altri eventi restano in coda. `summary` guarda tutti gli eventi filtrati: le cartelle con più eventi dicono dove sta il grosso della coda, e ogni voce di `folder_renames` è una cartella rinominata o spostata. Una rinomina si chiude con `review --prefix` sulla vecchia e sulla nuova cartella, dopo aver controllato che i file `changed` o `only_from` non tocchino note o fonti.
 
 1. Leggi i file pertinenti e riconciliali con note e collegamenti. Lascia aperti conflitti e cambiamenti non esaminati.
-2. Dopo le modifiche, esegui `python "{{strumento}}/controlla.py" scan --root Desktop` (o le radici coinvolte), poi rileggi `pending`: gli ID possono cambiare.
+2. Dopo le modifiche, esegui `{{python}} "{{strumento}}/controlla.py" scan --root Desktop` (o le radici coinvolte), poi rileggi `pending`: gli ID possono cambiare.
 3. Chiudi soltanto gli eventi riconciliati, indicando cosa hai verificato. Esempio, con ID da sostituire:
 
-   ```powershell
-   python "{{strumento}}/controlla.py" review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
+   ```
+   {{python}} "{{strumento}}/controlla.py" review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
    ```
 
 Quando la coda si allunga, chiudi per filtro gli eventi che non toccano note né fonti, per esempio foto o documenti aggiunti in cartelle senza note da aggiornare. `review` ricontrolla ogni file e, se uno è cambiato, non chiude nulla:
 
-```powershell
-python "{{strumento}}/controlla.py" review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
+```
+{{python}} "{{strumento}}/controlla.py" review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
 ```
 
-Per spostare file dopo il sì dell'utente, per esempio quelli nuovi della radice, scrivi un piano piccolo in `{{strumento}}/.stato/`, con un nome nuovo, ed eseguilo con `python "{{strumento}}/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle. Lì piano e giornale restano fuori dalla coda.
+Per spostare file dopo il sì dell'utente, per esempio quelli nuovi della radice, scrivi un piano piccolo in `{{strumento}}/.stato/`, con un nome nuovo, ed eseguilo con `{{python}} "{{strumento}}/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle. Lì piano e giornale restano fuori dalla coda.
 
 Se la radice ha errori o il file è cambiato, correggi il problema, ripeti la scansione e riesamina. Un errore che non si risolve, come un file sempre bloccato, si esclude in `config.json`; gli eventi di un percorso escluso si chiudono con una nota, senza ricontrollo. Non svuotare il registro per aggirare un conflitto. Una scansione parziale va dichiarata; una interrotta non dimostra assenza di modifiche. Comandi e limiti nel [README dello strumento](<{{strumento}}/README.md>).
 
@@ -73,7 +73,7 @@ Quando cambi radici, profondità o esclusioni in `config.json`, aggiorna questa 
 
 ## Verifiche e registro
 
-Esegui `python "{{strumento}}/controlla.py" links`. Correggi link e ancore rotti; controlla anche che le nuove note siano raggiungibili dalla guida pertinente. Il comando non verifica significato, URL remoti, riferimenti testuali o link dentro PDF/DOCX.
+Esegui `{{python}} "{{strumento}}/controlla.py" links`. Correggi link e ancore rotti; controlla anche che le nuove note siano raggiungibili dalla guida pertinente. Il comando non verifica significato, URL remoti, riferimenti testuali o link dentro PDF/DOCX.
 
 Le guide dei domini sono registrate nella [mappa generale](./MAPPA.md). Le guide annidate, con una riga sul loro ambito, si registrano qui:
 

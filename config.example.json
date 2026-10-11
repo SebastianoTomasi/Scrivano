@@ -8,5 +8,5 @@
   ],
   "exclude_dirs": [".git", ".venv", "venv", "node_modules", "__pycache__", ".stato", ".pytest_cache", ".cache", "dist", "build"],
   "exclude_paths": ["Scrivano", ".claude/worktrees/*", "*/.claude/worktrees/*"],
-  "exclude_files": ["desktop.ini", "Thumbs.db", "~$*", ".~lock.*", "*.pyc", ".env", ".env.*", "*.pem", "*.key", "*.pfx", "*.p12", "id_rsa*", "id_ed25519*", "*.kdbx", "*passw*", "*credenzial*", "*credential*"]
+  "exclude_files": ["desktop.ini", "Thumbs.db", ".DS_Store", ".localized", "~$*", ".~lock.*", "*.pyc", ".env", ".env.*", "*.pem", "*.pfx", "*.p12", "id_rsa*", "id_ed25519*", "*.kdbx", "*passw*", "*credenzial*", "*credential*"]
 }

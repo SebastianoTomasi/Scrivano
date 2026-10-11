@@ -12,14 +12,19 @@ import sqlite3
 import stat
 import sys
 import time
+import unicodedata
 from urllib.parse import unquote
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_CONFIG = HERE / 'config.json'
 # Attributi Windows dei file solo nel cloud (offline, recall on open, recall on data access).
 CLOUD = 0x1000 | 0x40000 | 0x400000
+# Flag macOS dei file "dataless" di iCloud e degli altri File Provider; stat.SF_DATALESS solo da Python 3.13.
+DATALESS = 0x40000000 if sys.platform == 'darwin' else 0
 # Bit "name surrogate" del reparse tag: il reparse point rimanda a un altro percorso (junction, link WSL).
 SURROGATE = 0x20000000
+# File system che di norma non distinguono maiuscole e minuscole: NTFS su Windows, APFS su macOS.
+NOCASE = os.name == 'nt' or sys.platform == 'darwin'
 
 class Linked(OSError):
     """Link simbolico o junction: non si segue."""
@@ -39,6 +44,14 @@ def is_link(info):
     # come i file di OneDrive, sono file normali.
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_reparse_tag', 0) & SURROGATE)
 
+def is_cloud(info):
+    # File solo nel cloud (OneDrive, iCloud): leggerlo lo scaricherebbe.
+    return bool(getattr(info, 'st_file_attributes', 0) & CLOUD or getattr(info, 'st_flags', 0) & DATALESS)
+
+def nfc(text):
+    # Su macOS gli accenti dei nomi possono arrivare scomposti (NFD): si confrontano nella forma composta.
+    return unicodedata.normalize('NFC', text)
+
 def signature(path, old=None, full=False):
     info = path.stat(follow_symlinks=False)
     if is_link(info):
@@ -50,8 +63,8 @@ def signature(path, old=None, full=False):
     meta = (info.st_size, info.st_mtime_ns)
     if old and not full and old['kind'] == 'file' and meta == (old['size'], old['mtime']):
         return old
-    if getattr(info, 'st_file_attributes', 0) & CLOUD:
-        # Leggerlo lo scaricherebbe dal cloud: bastano dimensione e data.
+    if is_cloud(info):
+        # Bastano dimensione e data.
         return {'kind': 'file', 'size': meta[0], 'mtime': meta[1], 'hash': None}
     sha = digest(path)
     after = path.stat(follow_symlinks=False)
@@ -102,24 +115,26 @@ def load_config(path):
     ids = [r['id'] for r in roots]
     if len(ids) != len(set(ids)):
         raise ValueError('ID delle radici duplicati')
-    # Percorsi relativi al file di configurazione, non alla cartella corrente; resolve() porta
-    # una radice che è un link alla sua destinazione.
+    # Percorsi relativi al file di configurazione, non alla cartella corrente; '~' vale la cartella
+    # dell'utente; resolve() porta una radice che è un link alla sua destinazione.
+    local = lambda value: path.parent / Path(value).expanduser()
     for root in roots:
-        root['path'] = str((path.parent / root['path']).resolve())
+        root['path'] = str(local(root['path']).resolve())
         if 'depth' in root and (type(root['depth']) is not int or root['depth'] < 1):
             raise ValueError(f"Profondità non valida per {root['id']}: usare un intero >= 1")
     if 'desktop' in config:
-        config['desktop'] = str((path.parent / config['desktop']).resolve())
-    config['database'] = str(path.parent / config.get('database', '.stato/registro.sqlite'))
+        config['desktop'] = str(local(config['desktop']).resolve())
+    config['database'] = str(local(config.get('database', '.stato/registro.sqlite')))
     return config
 
 def exclusions(config):
     # Compila le esclusioni una volta per scansione: stessa semantica di fnmatch.fnmatch.
-    dirs = {x.casefold() for x in config.get('exclude_dirs', [])}
+    dirs = {nfc(x).casefold() for x in config.get('exclude_dirs', [])}
     def patterns(key):
-        return [re.compile(fnmatch.translate(os.path.normcase(p.casefold()))).match for p in config.get(key, [])]
+        return [re.compile(fnmatch.translate(os.path.normcase(nfc(p).casefold()))).match for p in config.get(key, [])]
     paths, files = patterns('exclude_paths'), patterns('exclude_files')
     def check(rel):
+        rel = nfc(rel)
         parts = rel.split('/')
         if any(p.casefold() in dirs for p in parts):
             return True
@@ -172,8 +187,8 @@ def beneath(path, prefix):
     return not prefix or path == prefix or path.startswith(prefix + '/')
 
 def spelled(base, rel):
-    # Vero se rel esiste con queste maiuscole: su Windows un percorso trova il file anche con nomi
-    # scritti diversamente, ma dopo una rinomina di sole maiuscole il vecchio nome non c'è più.
+    # Vero se rel esiste scritto così: su Windows e macOS un percorso trova il file anche con altre maiuscole
+    # (e su macOS con gli accenti in altra forma), ma dopo una rinomina di sole maiuscole il vecchio nome non c'è più.
     folder = Path(base)
     for part in rel.split('/'):
         try:
@@ -190,10 +205,12 @@ def clean_prefix(prefix):
 
 def matches(row, root=None, prefix=None, depth=None):
     # Filtri comuni a pending e review; depth conta i livelli sotto la radice (1 = solo la radice).
-    # Su Windows il prefisso, come i nomi dei file, non distingue maiuscole e minuscole.
+    # Su Windows e macOS il prefisso, come i nomi dei file, non distingue maiuscole e minuscole.
     path = row['path']
-    if prefix and os.name == 'nt':
-        path, prefix = path.casefold(), prefix.casefold()
+    if prefix:
+        path, prefix = nfc(path), nfc(prefix)
+        if NOCASE:
+            path, prefix = path.casefold(), prefix.casefold()
     return ((not root or row['root'] == root) and (not prefix or beneath(path, prefix))
             and (depth is None or path.count('/') < depth))
 
@@ -502,6 +519,10 @@ def main():
     return code
 
 if __name__ == '__main__':
+    if sys.version_info < (3, 10):
+        # Su macOS il python3 degli strumenti per sviluppatori di Apple è spesso la 3.9.
+        print(json.dumps({'error': f'Serve Python 3.10 o successivo, non {sys.version.split()[0]}'}), file=sys.stderr)
+        raise SystemExit(2)
     try:
         raise SystemExit(main())
     except (OSError, ValueError, sqlite3.Error) as exc:

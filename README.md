@@ -4,7 +4,7 @@ Scrivano mette in ordine il Desktop e ne fa un archivio personale che il tuo age
 
 ## Per cominciare
 
-Serve Windows 11 con Claude Code o Codex. Se manca Python, lo installa l'agente.
+Serve Windows 11 o macOS con Claude Code o Codex. Se manca Python, lo installa l'agente.
 
 Apri l'agente sul tuo Desktop, in modalità auto (Claude Code) o con accesso completo (Codex), e scrivigli *Installa Scrivano da* seguito dall'indirizzo di questo repository.
 
@@ -24,10 +24,11 @@ Per aggiornare il sistema scrivi all'agente *aggiorna Scrivano*.
 - **Cosa legge l'agente?** Quello che gli serve per orientarsi, tranne chiavi, `.env` e file di password, che ti segnala senza aprirli. Ciò che legge passa al fornitore del modello: Anthropic per Claude, OpenAI per Codex.
 - **E la memoria di Claude o Codex?** Resta com'è e ricorda come preferisci lavorare. L'archivio tiene ciò che si sa dei tuoi documenti: sta sul Desktop, lo leggi anche tu e lo usano entrambi gli agenti.
 - **Si può tornare indietro?** Sì: ogni spostamento è annotato e l'agente può annullarlo.
-- **Il Desktop è su OneDrive.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
-- **Alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
+- **Il Desktop è su OneDrive o iCloud.** Funziona: i file solo nel cloud vengono controllati senza scaricarli.
+- **Il Mac chiede il permesso di accedere a Scrivania, Documenti e Download.** Concedilo all'app da cui parte l'agente: senza, non può leggerli. Se l'hai negato, riattivalo in Impostazioni di Sistema → Privacy e sicurezza → File e cartelle.
+- **Su Windows alcune icone non si spostano.** Sono in `Public\Desktop`, condiviso tra gli utenti del PC: servono i permessi di amministratore, quindi restano dove sono.
 - **Word non trova più un documento recente.** È normale dopo il riordino: aprilo dalla nuova cartella.
-- **Disinstallare.** Cancella `Documenti\Scrivano` e, se c'è, `%LOCALAPPDATA%\Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
+- **Disinstallare.** Cancella `Documenti\Scrivano` e, se c'è, `%LOCALAPPDATA%\Scrivano`, su Mac `~/Library/Application Support/Scrivano`, poi sul Desktop `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md` delle cartelle. Se usi Codex, cancella anche `.codex-root` e togli `".codex-root"` da `project_root_markers` in `~/.codex/config.toml`. Il riordino e le note restano.
 
 ## Per l'agente
 
@@ -53,11 +54,11 @@ Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-inst
 | `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
 | `python controlla.py links` | Controlla link locali e ancore Markdown |
 
-Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows non distingue maiuscole e minuscole. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
+Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows e macOS non distingue maiuscole e minuscole, e ovunque un accento vale composto o scomposto (NFC o NFD), come nei nomi creati su macOS. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
 
 ### Configurazione
 
-Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione.
+Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione; `~` vale la cartella dell'utente.
 
 - `desktop`: radice dell'archivio da cui parte `links`.
 - `database`: registro SQLite, di norma `.stato/registro.sqlite`; in una cartella locale, non sincronizzata.
@@ -66,7 +67,7 @@ Parti da [config.example.json](./config.example.json). I percorsi relativi sono 
 - `exclude_files`: nomi con i caratteri jolly `*` e `?`, confrontati con l'ultima parte di ogni percorso: valgono anche per le cartelle, quindi `*passw*` salta pure una cartella `Password`.
 - `exclude_paths`: percorsi relativi a ciascuna radice, con gli stessi caratteri jolly.
 
-Le esclusioni non distinguono maiuscole e minuscole.
+Le esclusioni non distinguono maiuscole e minuscole, né accenti composti e scomposti.
 
 Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente è rifiutato. Cambiare esclusioni o ridurre la profondità modifica la copertura senza produrre false cancellazioni dei percorsi non più osservati; i loro eventi pendenti restano, e `review` li chiude senza ricontrollare il file. Symlink e junction non vengono seguiti; il filtro dei nomi sensibili non garantisce di riconoscere ogni segreto.
 
@@ -75,7 +76,7 @@ Un nuovo ID radice crea una nuova base; cambiare il percorso di un ID esistente 
 1. `scan` registra aggiunte, modifiche e cancellazioni, incluse le cartelle vuote. La prima scansione di una radice crea solo la base osservata e non dichiara letti i documenti.
 2. `pending` mostra la coda dal cambiamento più recente. Un cambiamento successivo dello stesso percorso supera l'evento precedente e ne crea uno nuovo: rileggi la coda prima di chiudere. Le rinomine sono suggerimenti basati su coppie univoche di impronte tra aggiunte e cancellazioni; non vengono applicate. `summary` riassume gli eventi filtrati, anche quelli oltre il limite: le dieci cartelle con più eventi, fino a due livelli, e le rinomine di cartella, cioè una cartella cancellata e una aggiunta nella stessa radice con almeno metà dei file identici.
 3. L'agente legge i file, aggiorna le note e riesegue `scan`: anche le note modificate generano eventi.
-4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla. Gli eventi di percorsi non più osservati (esclusi, oltre la profondità o di una radice tolta dalla configurazione) si chiudono senza ricontrollo. Dopo una rinomina di sole maiuscole il vecchio nome conta come cancellato, anche se Windows lo trova ancora.
+4. `review` chiude gli eventi indicati per ID o per filtro (`--root`, `--prefix`) con una nota obbligatoria. Ricontrolla l'impronta di ogni file e rifiuta ID superati, file nuovamente modificati e radici con errori; se un solo evento non passa, non chiude nulla. Gli eventi di percorsi non più osservati (esclusi, oltre la profondità o di una radice tolta dalla configurazione) si chiudono senza ricontrollo. Dopo una rinomina di sole maiuscole il vecchio nome conta come cancellato, anche se Windows o macOS lo trovano ancora.
 
 Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le note di `review` restano nella tabella `events`.
 
@@ -85,10 +86,12 @@ Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le
 
 | Comando | Effetto |
 | --- | --- |
-| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
+| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, pacchetti macOS, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
 | `python riordina.py esegui piano.json --prova` | Controlla il piano senza spostare nulla |
 | `python riordina.py esegui piano.json` | Esegue il piano |
 | `python riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
+
+L'inventario non entra nei pacchetti macOS, cartelle che il Finder mostra come un'app o un documento (librerie di Foto, progetti di GarageBand, alcuni documenti Pages o Keynote), e tralascia `.DS_Store` e `Thumbs.db`, metadati che il sistema rigenera. Un `.key` che è uno zip è una presentazione Keynote; gli altri contano come chiavi.
 
 Il piano è un JSON con la radice, le mosse e, se servono, le cartelle-contenitore da togliere quando restano vuote. I percorsi sono relativi alla radice:
 
@@ -100,12 +103,12 @@ Il piano è un JSON con la radice, le mosse e, se servono, le cartelle-contenito
 ```
 
 - Le mosse descrivono l'albero di partenza: origini e destinazioni non si ripetono, non si sovrappongono e restano dentro la radice. Le cartelle mancanti vengono create. Un cambio di sole maiuscole passa da un nome intermedio, in due piani.
-- Dopo le mosse, ogni cartella di `vuote` rimasta davvero vuota viene tolta; una con qualcosa dentro resta e compare in `cartelle_rimaste`.
-- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella e lascia a mano link simbolici e junction, insieme a ciò che si raggiunge attraverso di loro; i collegamenti `.lnk` e `.url` sono file normali.
+- Dopo le mosse, ogni cartella di `vuote` rimasta vuota viene tolta. `.DS_Store` e `Thumbs.db` non contano: si cancellano con la cartella, annotati nel giornale, e Finder ed Esplora risorse li rigenerano. Una cartella con qualcos'altro dentro, o con un metadato in uso, resta e compare in `cartelle_rimaste`.
+- Prima di spostare, lo script controlla l'intero piano: con un solo problema non sposta nulla. Non sovrascrive, non cancella altro che quei metadati e lascia a mano link simbolici e junction, insieme a ciò che si raggiunge attraverso di loro; i collegamenti `.lnk` e `.url`, gli alias del Finder e i `.webloc` sono file normali.
 - Durante l'esecuzione si ferma al primo errore, per esempio un file aperto. Rilanciato sullo stesso piano, salta le mosse annotate nel giornale e già compiute, cioè con l'origine sparita e la destinazione presente, e riprende. La stessa situazione senza traccia nel giornale è un problema del piano.
-- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita: ogni piano ha il suo giornale, quindi una correzione successiva va in un piano nuovo, con un altro nome. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
+- Ogni mossa è annotata in `piano.giornale.jsonl`, accanto al piano, prima di essere eseguita: ogni piano ha il suo giornale, quindi una correzione successiva va in un piano nuovo, con un altro nome. `annulla` ripercorre il giornale al contrario: ricrea le cartelle tolte, riporta i file, rimuove le cartelle create se sono rimaste vuote, a parte i metadati, e lascia dove sono i file aggiunti dopo; a lavoro completo rinomina il giornale.
 - `riordina.lock`, accanto al piano, impedisce due esecuzioni insieme. Se resta dopo un'interruzione, verifica lo stato della cartella e poi cancellalo.
-- L'esecuzione confronta il numero di file prima e dopo, contando anche l'interno di `.git` e simili, che l'inventario invece salta: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
+- L'esecuzione confronta il numero di file prima e dopo, contando anche l'interno di `.git` e simili, che l'inventario invece salta, ma non i metadati: se cambia, qualcos'altro ha toccato la cartella nel frattempo.
 
 Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento diventa una cancellazione più un'aggiunta da revisionare.
 
@@ -114,8 +117,8 @@ Riordina prima della prima scansione di `controlla.py`: dopo, ogni spostamento d
 | Caso | Comportamento / azione |
 | --- | --- |
 | Dimensione e timestamp invariati | La scansione veloce può perdere l'edit; usa `--full` se sospetto |
-| File solo nel cloud (OneDrive) | Confrontati su dimensione e data senza leggerli, quindi senza scaricarli; niente suggerimenti di rinomina |
-| Registro in una cartella sincronizzata (OneDrive) | Il client può bloccarlo mentre lo carica o crearne copie in conflitto: tienilo in una cartella locale, con `database` assoluto, per esempio in `%LOCALAPPDATA%\Scrivano` |
+| File solo nel cloud (OneDrive, iCloud) | Confrontati su dimensione e data senza leggerli, quindi senza scaricarli; niente suggerimenti di rinomina |
+| Registro in una cartella sincronizzata (OneDrive, iCloud) | Il client può bloccarlo mentre lo carica o crearne copie in conflitto: tienilo in una cartella locale, con `database` assoluto, per esempio in `%LOCALAPPDATA%\Scrivano` o, su macOS, in `~/Library/Application Support/Scrivano` |
 | File creato e cancellato tra scansioni | Non osservabile; il registro non è un backup né una cronologia dei contenuti |
 | Radice o sottocartella inaccessibile | Segnala errore, conserva lo stato della parte inaccessibile; le parti leggibili possono essere aggiornate. Finché l'errore resta, `review` rifiuta gli eventi di quella radice: correggi la causa o escludi il percorso |
 | Eccezione o interruzione prima del commit | Annulla la transazione; ripeti la scansione |
@@ -136,5 +139,7 @@ I test lavorano solo su cartelle temporanee. Per provare l'installazione complet
 python tests/desktop_finto.py genera C:/Prove/Uno --strumento .
 python tests/desktop_finto.py verifica C:/Prove/Uno
 ```
+
+Con `genera ... --mac` il Desktop finto è quello di un Mac: metadati del Finder, Keynote accanto a una chiave vera, un pacchetto, screenshot, niente `.lnk`.
 
 Poi chiedi all'agente di seguire `INSTALLA.md` in modalità prova, indicandogli `C:/Prove/Uno/Desktop` come Desktop e `C:/Prove/Uno/Documenti/Scrivano` come strumento.
