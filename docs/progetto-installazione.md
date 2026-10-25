@@ -25,7 +25,7 @@ Una persona chiede al proprio agente, Claude Code o Codex, di installare il sist
 ## Dove sta cosa
 
 - **`Documenti\Scrivano\`**: il repository (script, modelli e catalogo dei domini in `modelli/`, README, `INSTALLA.md`, `AGGIORNA.md`, CHANGELOG). Accanto a `controlla.py`, ignorati da git: `config.json` e `.stato/` con registro, piano e giornale del riordino. Il rilevatore esclude questa cartella. Se Documenti è sincronizzato da OneDrive o da iCloud, il registro va in `%LOCALAPPDATA%\Scrivano`, su macOS in `~/Library/Application Support/Scrivano`: un database che cambia a ogni sessione non sta bene in una cartella sincronizzata.
-- **Desktop**, radice dell'archivio: `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` in radice; in ogni dominio una `GUIDA.md` con confine, regole locali, ingressi e copertura. Una mappa separata si aggiunge solo quando il dominio cresce. `.codex-root` solo se l'utente usa Codex.
+- **Desktop**, radice dell'archivio: `AGENTS.md`, `MAPPA.md` e `MANUTENZIONE.md` in radice; in ogni dominio una `GUIDA.md` con confine, regole locali, dove vanno i documenti nuovi, ingressi e copertura. Le guide seguono le cartelle: una sottocartella con regole proprie, o cresciuta tanto che la guida del dominio non basta più a orientarcisi, prende una guida propria collegata dal genitore; la mappa resta una, nella radice. `.codex-root` solo se l'utente usa Codex.
 - **Un solo `AGENTS.md`.** Le guide di dominio sono md normali raggiunti dalla mappa: Codex non carica gli `AGENTS.md` sotto la cartella di avvio, mentre Claude li caricherebbe solo quando legge un file lì dentro. Un link esplicito funziona allo stesso modo con entrambi.
 - **Nient'altro oltre all'archivio**: nessuna skill sul Desktop, nessun puntatore in `~/.claude` o `~/.codex`. Per le cose personali l'utente apre l'agente sul Desktop.
 - I modelli nel repository hanno nomi neutri, così nessun agente li scambia per istruzioni; l'agente li copia sul Desktop e li adatta.
@@ -65,7 +65,7 @@ I domini si scelgono dall'oggetto delle domande, non dal tipo di file o dal cont
 - L'agente aperto sul Desktop legge `AGENTS.md` ed esegue `scan` e `pending`.
 - Con il limite, `pending` mostra i cambiamenti più recenti; `--depth 1` mostra solo quelli della radice.
 - La coda si mantiene da sola: oltre i 50 eventi, una volta per sessione e dopo aver risposto, l'agente chiude con una nota rinomine e gruppi che non richiedono lavoro (`review --prefix`), partendo dal riepilogo di `pending`, e propone in una riga di escludere il rumore che si ripete.
-- File nuovi in radice: al massimo una proposta per sessione su dove metterli; se l'utente dice "lascia", la voce si chiude.
+- File nuovi in radice: al massimo una proposta per sessione su dove metterli, secondo «Dove va cosa» della guida, con un nome nuovo solo se quello originale non dice nulla; se l'utente dice "lascia", la voce si chiude. Quello che l'agente scrive per l'utente nasce già nel dominio del tema, non in radice né in Download.
 
 ## Aggiornamento e disinstallazione
 

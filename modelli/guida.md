@@ -12,6 +12,10 @@
 
 - {{regola locale}}
 
+## Dove va cosa
+
+- {{tipo di documento}} → `{{sottocartella}}/`, {{come si chiamano i file, se la cartella ha una convenzione}}.
+
 ## Ingressi
 
 - [{{Cartella o nota}}](./{{percorso}}): {{a cosa serve}}.

@@ -2,6 +2,27 @@
 
 Voci per data, dalla più recente, una per data: le modifiche dello stesso giorno si aggiungono alla sua voce. La data fa da versione. Un'istanza registra quella dei suoi modelli e, aggiornandosi, rilegge anche la voce di quel giorno, che nel frattempo può essersi allungata: per questo le azioni si scrivono in modo che ripeterle non faccia danni. Ogni voce dice cosa cambia; **Azioni per l'istanza** dice cosa adattare in un'installazione già presente, seguendo [AGGIORNA.md](./AGGIORNA.md).
 
+## 2026-10-25
+
+Pagine del Desktop riviste per chi le legge, l'agente: dicono prima a cosa serve l'archivio e perché ogni regola esiste, così valgono anche nei casi che non descrivono.
+
+- `AGENTS.md`: apre con lo scopo dell'archivio (l'utente chiede all'agente invece di cercare tra le cartelle) e con la precedenza tra regole comuni, guide, note e documenti. «Avvio del lavoro» diventa «Come lavorare», in tre momenti: a ogni sessione, per rispondere, dopo aver risposto, con la coda spiegata come traccia di ciò che l'utente ha fatto a mano. Dopo la risposta la proposta è una sola per sessione, dove mettere i file nuovi oppure escludere un rumore, come vuole il progetto. La nuova sezione «Dove va cosa» raccoglie radice come ingresso, nomi delle cartelle, repository e Download, e aggiunge che quello che l'agente scrive per l'utente nasce nel dominio del tema, non nella radice né in Download, e che il nome di un file collocato resta quello originale, con un nome proposto insieme alla destinazione solo se non dice nulla. «Percorsi e riservatezza» diventa «Riservatezza».
+- `GUIDA.md`: nuova sezione «Dove va cosa», tra «Regole locali» e «Ingressi», con la sottocartella e la convenzione di nome dei documenti nuovi del dominio. Nel catalogo le sottocartelle tipiche alimentano quella sezione e «Schemi di sottocartelle e nomi» dice come si trattano i nomi dei file.
+- Le guide seguono le cartelle: una `GUIDA.md` anche nella sottocartella che ha regole proprie o è cresciuta tanto che quella del genitore non basta più a orientarcisi, collegata dal genitore, che smette di elencarne l'interno; l'agente scende di guida in guida fino al tema. La tabella delle pagine di `MANUTENZIONE.md` e una riga sulla forma delle guide annidate dicono quando e come.
+- `MANUTENZIONE.md`: «Scrivere e aggiornare una nota» in prosa, senza i passi che ripetevano `AGENTS.md`; «Revisionare i cambiamenti» in paragrafi (leggere la coda, riconciliare e chiudere, chiudere in blocco, spostare file, errori) e ricorda che uno spostamento compare come cancellazione più aggiunta.
+- `MAPPA.md`: la prima colonna porta le parole con cui l'utente ne parla; la copertura ha i tre livelli delle guide.
+- Procedure: `INSTALLA.md` scrive «Dove va cosa» dalle sottocartelle del catalogo e da quelle già in uso, prevede guide annidate dove una sottocartella non si capisce dai nomi, chiede alla mappa le parole dell'utente e, in chiusura, dice che quello che l'agente scrive nasce nella cartella del tema.
+
+**Azioni per l'istanza:**
+
+- In `AGENTS.md`, se l'apertura non dice a cosa serve l'archivio, sostituiscila con le due righe iniziali del modello, con il nome dell'utente; la frase sulla precedenza di guide locali, note canoniche e fonti passa da «Tenere le pagine aggiornate» all'apertura, se è ancora lì.
+- In `AGENTS.md`, se c'è ancora «Avvio del lavoro», riscrivila come «Come lavorare» del modello, tenendo i comandi dell'istanza; poi in `MANUTENZIONE.md` cambia il link `#avvio-del-lavoro` in `#come-lavorare`.
+- In `AGENTS.md`, se manca «Dove va cosa», creala con le righe del modello e spostaci da «Percorsi e riservatezza» le righe su nomi delle cartelle, repository e Download; quella che resta si chiama «Riservatezza» e tiene la frase sull'archivio privato. Se la prima riga di «Dove va cosa» non parla dei nomi dei file, aggiungi la frase del modello sui nomi che non dicono nulla.
+- In ogni `GUIDA.md` di dominio, se manca «Dove va cosa», aggiungila tra «Regole locali» e «Ingressi» con le sottocartelle che il dominio usa davvero e le convenzioni di nome che vedi in uso, una riga per tipo di documento; dove non c'è nulla da dire, ometti la sezione. Le guide annidate la prendono solo se la loro cartella colloca documenti in modo proprio.
+- Guarda le sottocartelle dei domini: dove una non si capisce più dai nomi, perché ha troppe cose o regole proprie, dalle una `GUIDA.md` nella forma descritta in `MANUTENZIONE.md`, collegala dalla guida del genitore al posto dell'elenco del suo interno e registrala in «Verifiche e registro». Dove i nomi bastano, non serve.
+- In `MANUTENZIONE.md`, «Revisionare i cambiamenti»: se manca, aggiungi in testa la frase del modello su cosa elenca la coda e, nel paragrafo sullo spostamento dei file, che uno spostamento compare come cancellazione più aggiunta. «Scrivere e aggiornare» può passare alla prosa del modello o restare com'è.
+- In `MAPPA.md`, se la riga sulla copertura nomina solo censito e interpretato, sostituiscila con quella del modello, a tre livelli.
+
 ## 2026-10-11
 
 Installazione e uso su macOS.

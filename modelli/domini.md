@@ -10,7 +10,7 @@ Punto di partenza per proporre i domini di un Desktop e scriverne le guide. Si a
 - Nomi in italiano, PascalCase ASCII. Una cartella esistente con un nome riconoscibile può diventare il dominio senza cambiare nome.
 - Ciò che non trova posto resta nella radice del Desktop, che fa da ingresso.
 
-Per ogni dominio: cosa possiede, a chi rimanda, le regole locali da riportare nella guida e le sottocartelle che di solito servono.
+Per ogni dominio: cosa possiede, a chi rimanda, le regole locali da riportare nella guida e le sottocartelle che di solito servono, da cui parte la sezione «Dove va cosa» della guida.
 
 ## Domini di base
 
@@ -111,7 +111,7 @@ Quando la casa produce molto materiale (mutuo o affitto, condominio, utenze, lav
 - **Possiede:** contratti della casa, utenze, condominio, manutenzione e lavori.
 - **Rimanda a:** spese → Finanze; residenza → Amministrazione.
 
-## Schemi di sottocartelle
+## Schemi di sottocartelle e nomi
 
 - **Per pratica:** una cartella per pratica, con moduli e allegati insieme.
 - **Per ente o fornitore:** `<Banca>/`, `Acquisti/<Fornitore>/`.
@@ -120,3 +120,4 @@ Quando la casa produce molto materiale (mutuo o affitto, condominio, utenze, lav
 - **Per persona:** `<Nome>/` dentro un dominio, se il PC raccoglie documenti di più familiari.
 - **Per bene:** `Veicoli/<Veicolo>/`, `Casa/<Indirizzo>/`: documenti, manutenzione e note insieme.
 - **Per progetto:** la cartella del progetto si sposta intera, senza toccarne l'interno.
+- **Nomi dei file:** restano quelli originali. Una cartella può darsi una convenzione, scritta in «Dove va cosa» della guida, per esempio `AAAA-MM-GG Oggetto` per i documenti datati o `Fornitore AAAA-MM` per le bollette: serve ai nomi che non dicono nulla (`scan0001.pdf`, `Documento (2).pdf`), che si rinominano con quella, insieme allo spostamento.

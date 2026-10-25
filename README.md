@@ -13,7 +13,7 @@ L'agente guarda cosa c'è sul Desktop, ti propone un'organizzazione per argoment
 ## Uso quotidiano
 
 - Per le cose personali apri l'agente sul Desktop.
-- Lascia i file nuovi sul Desktop: l'agente propone dove metterli, al massimo una volta per sessione.
+- Lascia i file nuovi sul Desktop: l'agente propone dove metterli, e un nome se quello che hanno non dice nulla, al massimo una volta per sessione. Quello che scrive per te nasce già nella cartella del tema.
 - Chiedi quello che ti serve, per esempio "dov'è il contratto d'affitto?" o "quanto ho speso di luce quest'anno?": l'agente parte dalla mappa e dalle guide.
 - Quando apri l'agente, un rilevatore gli dice quali file sono cambiati dall'ultima volta. Non gira in background e non devi occupartene.
 

@@ -100,9 +100,9 @@ Copia i modelli e sostituisci ogni segnaposto `{{...}}` con i valori di questa i
 | [modelli/guida.md](./modelli/guida.md) | `GUIDA.md` in ogni dominio |
 | [config.example.json](./config.example.json) | `config.json` nello strumento |
 
-1. **Guide.** Confine e regole locali dal catalogo, adattati a quello che hai visto e a ciò che l'utente ha detto; ingressi dalle cartelle e dai file che il dominio contiene davvero; copertura "censito". Ometti le sezioni che restano vuote.
+1. **Guide.** Confine e regole locali dal catalogo, adattati a quello che hai visto e a ciò che l'utente ha detto; «Dove va cosa» dalle sottocartelle tipiche del catalogo e da quelle che esistono già, con le convenzioni di nome che vedi in uso; ingressi dalle cartelle e dai file che il dominio contiene davvero; copertura "censito". Ometti le sezioni che restano vuote. Una sottocartella con regole proprie, o con troppe cose per capirsi dai nomi, prende una guida propria, collegata dalla guida del dominio e registrata in `MANUTENZIONE.md`.
 2. **Regole.** In «Questa istanza»: il perimetro, il percorso dello strumento e la data dei modelli, cioè la voce più recente del [CHANGELOG](./CHANGELOG.md).
-3. **Mappa.** Una riga per dominio e una per ogni cartella esterna, con il suo uso. Le domande trasversali solo se l'utente ne ha nominata qualcuna.
+3. **Mappa.** Una riga per dominio, con le parole con cui l'utente ne parla, e una per ogni cartella esterna, con il suo uso. Le domande trasversali solo se l'utente ne ha nominata qualcuna.
 4. **Manutenzione.** In «Copertura del rilevatore» scrivi radici, profondità ed esclusioni scelte e perché; nel registro delle guide annidate scrivi "nessuna per ora" se non ce ne sono.
 5. **Configurazione.** Radici: il Desktop per intero; Documenti a due livelli e Download a uno, come nel modello; altre cartelle esterne se l'utente le usa. Esclusioni: quelle del modello, dove `Scrivano` toglie lo strumento dalla radice Documenti, più le `esclusioni_suggerite` dell'inventario e, in `exclude_paths`, i `segreti` dell'inventario che le esclusioni del modello non coprono, come una chiave `.key`. Registro: se lo strumento sta in una cartella sincronizzata, da OneDrive (il percorso di Documenti contiene `\OneDrive\`) o da iCloud (punto 1.1), scrivi in `database` il percorso assoluto di `%LOCALAPPDATA%\Scrivano\registro.sqlite`, su macOS di `~/Library/Application Support/Scrivano/registro.sqlite`, perché la sincronizzazione può bloccare o duplicare un database che cambia a ogni sessione; altrimenti lascia quello del modello. Decidi tutto prima della prima scansione: dopo, ogni cambio di copertura costa eventi.
 6. **Codex.** Se l'utente lo usa, crea un file vuoto `.codex-root` nella radice del Desktop e, con il suo consenso, aggiungi `".codex-root"` a `project_root_markers` in `~/.codex/config.toml`: `project_root_markers = [".git", ".codex-root"]`, come chiave di primo livello, prima di ogni sezione `[...]`. Se la chiave esiste già, aggiungi il marcatore al suo elenco: una seconda riga renderebbe il file illeggibile per Codex, e un elenco vuoto `[]` è una scelta da discutere con l'utente. Senza il marcatore, Codex legge l'`AGENTS.md` del Desktop solo se lo si apre proprio sul Desktop, non in una sottocartella.
@@ -120,7 +120,7 @@ Fatto quando nelle pagine non resta nessun `{{`, `links` non segnala problemi, o
 Spiega all'utente, in poche righe:
 
 - per le cose personali apre Claude Code o Codex sul Desktop, in modalità auto o accesso completo;
-- i file nuovi li lascia nella radice: l'agente propone dove metterli;
+- i file nuovi li lascia nella radice: l'agente propone dove metterli, e quello che scrive per lui nasce già nella cartella del tema;
 - può chiedere qualsiasi cosa sui suoi documenti: l'agente parte dalla mappa e dalle guide;
 - a ogni sessione l'agente lancia il rilevatore per sapere quali file sono cambiati e tenere aggiornate le note; non gira in background e l'utente non deve occuparsene.
 

@@ -1,10 +1,10 @@
 # Mappa della conoscenza
 
-Scegli dalla domanda, poi apri la guida del dominio: confine, regole e ingressi. Le guide indicano dove cercare; stato e decisioni sono nelle note collegate.
+Cerca nella prima colonna le parole della domanda e apri la guida del dominio: dice cosa possiede, quali regole valgono lì, da quali ingressi partire e dove vanno le cose nuove. Stato e decisioni sono nelle note che la guida collega.
 
 | Cerchi | Guida |
 | --- | --- |
-| {{argomenti del dominio}} | [{{Dominio}}](./{{Dominio}}/GUIDA.md) |
+| {{argomenti del dominio, con le parole che usa l'utente}} | [{{Dominio}}](./{{Dominio}}/GUIDA.md) |
 
 ## Percorsi esterni
 
@@ -16,7 +16,7 @@ Scegli dalla domanda, poi apri la guida del dominio: confine, regole e ingressi.
 
 - **{{domanda ricorrente}}:** {{Dominio}} per {{aspetto}}, {{Dominio}} per {{aspetto}}.
 
-La copertura è dichiarata nelle guide dei domini: **censito** significa localizzato; **interpretato** significa sintetizzato con fonti. Nessuna delle due etichette garantisce attualità: controlla le date dei fatti.
+Ogni guida dichiara la sua copertura: **censito** vuol dire che si sa dov'è, **parzialmente esaminato** che se n'è letta una parte, indicata, **interpretato** che esiste una sintesi con le fonti. Nessuna etichetta garantisce attualità: controlla le date dei fatti.
 
 [Regole](./AGENTS.md) · [Manutenzione](./MANUTENZIONE.md)
 
