@@ -38,7 +38,7 @@ Se l'utente ti chiede di installare il sistema, segui [INSTALLA.md](./INSTALLA.m
 
 `controlla.py` rileva i cambiamenti nei file e li tiene in una coda da revisionare, così le note derivate non restano indietro rispetto alle fonti. `riordina.py` fa l'inventario di una cartella ed esegue un piano di riordino approvato. Usano Python 3.10+ e solo la libreria standard, senza inviare dati in rete. Le decisioni spettano all'agente: `controlla.py` non modifica i file osservati e non interpreta i cambiamenti, `riordina.py` esegue soltanto il piano che riceve.
 
-Le decisioni di progetto sono nel [progetto di installazione](docs/progetto-installazione.md); i modelli delle pagine del Desktop e il catalogo dei domini in [modelli](./modelli/); le novità di ogni versione nel [CHANGELOG](./CHANGELOG.md).
+Le decisioni di progetto sono in [docs](docs/), con il vocabolario in [GLOSSARY.md](GLOSSARY.md); i modelli delle pagine del Desktop e il catalogo dei domini in [modelli](./modelli/); le novità di ogni versione nel [CHANGELOG](./CHANGELOG.md).
 
 ### Comandi del rilevatore
 
