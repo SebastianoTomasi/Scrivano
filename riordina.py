@@ -110,39 +110,61 @@ def add_file(rel, path, info, acc, state):
         state['per_dimensione'].setdefault(size, []).append((rel, path))
     return secret
 
-def visit(folder, rel, level, depth, acc, state):
+def visit(folder, rel, level, depth, acc, state, items=None):
+    # Sotto la radice tutto si somma in acc; alla radice (items) ogni voce ha il proprio riassunto.
     try:
         with os.scandir(folder) as listing:
             entries = sorted(listing, key=lambda e: e.name.casefold())
     except OSError as exc:
+        if items is not None:
+            raise  # una radice illeggibile non ha inventario
         state['errori'].append({'percorso': rel, 'errore': str(exc)})
         acc['parziale'] = True
         return
-    if any(e.name.casefold() in PROJECT for e in entries):
+    if rel and any(e.name.casefold() in PROJECT for e in entries):
         state['progetti'].append(rel)
     for entry in entries:
-        child = f'{rel}/{entry.name}'
+        name = entry.name
+        child = f'{rel}/{name}' if rel else name
         try:
             info = os.stat(entry.path, follow_symlinks=False)
         except OSError as exc:
             state['errori'].append({'percorso': child, 'errore': str(exc)})
             continue
+        own = tally() if items is not None else acc
         if is_link(info):
             state['link'].append(child)
+            item = {'nome': name, 'tipo': 'link'}
         elif stat.S_ISDIR(info.st_mode):
             acc['cartelle'] += 1
             state['totale']['cartelle'] += 1
-            if entry.name.casefold() in HEAVY:
-                acc['pesanti'].add(entry.name)
-                state['pesanti'].add(entry.name)
-            elif is_package(entry.name):
+            item = {'nome': name, 'tipo': 'cartella'}
+            if name.casefold() in HEAVY:
+                own['pesanti'].add(name)
+                state['pesanti'].add(name)
+            elif is_package(name):
                 state['pacchetti'].append(child)
+                item['pacchetto'] = True
             elif depth is None or level + 1 < depth:
-                visit(entry.path, child, level + 1, depth, acc, state)
+                visit(entry.path, child, level + 1, depth, own, state)
             else:
-                acc['parziale'] = True
-        elif stat.S_ISREG(info.st_mode) and entry.name.casefold() not in METADATA:
-            add_file(child, entry.path, info, acc, state)
+                own['parziale'] = True
+        elif stat.S_ISREG(info.st_mode) and name.casefold() not in METADATA:
+            secret = add_file(child, entry.path, info, own, state)
+            item = {'nome': name, 'tipo': 'file', 'byte': info.st_size, 'modificato': day(info.st_mtime_ns)}
+            if is_cloud(info):
+                item['solo_cloud'] = True
+            if secret:
+                item['segreto'] = True
+        else:
+            continue
+        if items is None:
+            continue
+        if item['tipo'] == 'cartella':
+            item.update(summary(own))
+            if name in state['progetti']:
+                item['progetto'] = True
+        items.append(item)
 
 def summary(acc):
     out = {'file': acc['file'], 'cartelle': acc['cartelle'], 'byte': acc['byte'],
@@ -182,44 +204,8 @@ def inventory(root, depth=None, limit=300):
     state = {'totale': {'file': 0, 'cartelle': 0, 'byte': 0, 'solo_cloud': 0}, 'estensioni': Counter(),
              'progetti': [], 'pacchetti': [], 'segreti': [], 'link': [], 'pesanti': set(), 'errori': [],
              'grandi': [], 'per_dimensione': {}}
-    with os.scandir(base) as listing:
-        entries = sorted(listing, key=lambda e: e.name.casefold())
     items = []
-    for entry in entries:
-        name = entry.name
-        try:
-            info = os.stat(entry.path, follow_symlinks=False)
-        except OSError as exc:
-            state['errori'].append({'percorso': name, 'errore': str(exc)})
-            continue
-        if is_link(info):
-            state['link'].append(name)
-            items.append({'nome': name, 'tipo': 'link'})
-        elif stat.S_ISDIR(info.st_mode):
-            state['totale']['cartelle'] += 1
-            acc, item = tally(), {'nome': name, 'tipo': 'cartella'}
-            if name.casefold() in HEAVY:
-                acc['pesanti'].add(name)
-                state['pesanti'].add(name)
-            elif is_package(name):
-                state['pacchetti'].append(name)
-                item['pacchetto'] = True
-            elif depth is None or depth > 1:
-                visit(entry.path, name, 1, depth, acc, state)
-            else:
-                acc['parziale'] = True
-            item.update(summary(acc))
-            if name in state['progetti']:
-                item['progetto'] = True
-            items.append(item)
-        elif stat.S_ISREG(info.st_mode) and name.casefold() not in METADATA:
-            secret = add_file(name, entry.path, info, tally(), state)
-            item = {'nome': name, 'tipo': 'file', 'byte': info.st_size, 'modificato': day(info.st_mtime_ns)}
-            if is_cloud(info):
-                item['solo_cloud'] = True
-            if secret:
-                item['segreto'] = True
-            items.append(item)
+    visit(base, '', 0, depth, tally(), state, items)
     return {'radice': str(base), 'totale': state['totale'], 'voci': items[:limit],
             'altre_voci': max(0, len(items) - limit), 'estensioni': dict(state['estensioni'].most_common(15)),
             'progetti': state['progetti'][:50], 'pacchetti': state['pacchetti'][:50],
