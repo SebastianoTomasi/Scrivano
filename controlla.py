@@ -112,6 +112,11 @@ def load_config(path):
     for key in ('desktop', 'database'):
         if key in config and not text(config[key]):
             raise ValueError(f'Configurazione non valida: "{key}" è un percorso')
+    for key in ('exclude_dirs', 'exclude_files', 'exclude_paths'):
+        # Una stringa al posto dell'elenco verrebbe letta lettera per lettera: "*.pyc" escluderebbe tutto.
+        values = config.get(key, [])
+        if not isinstance(values, list) or not all(text(v) for v in values):
+            raise ValueError(f'Configurazione non valida: "{key}" è un elenco di nomi')
     ids = [r['id'] for r in roots]
     if len(ids) != len(set(ids)):
         raise ValueError('ID delle radici duplicati')
@@ -273,7 +278,9 @@ def scan(config, root_ids=None, full=False):
                 if after is None:
                     con.execute('DELETE FROM observed WHERE root=? AND path=?', (root_id, rel))
             for rel, sig in found.items():
-                con.execute('INSERT OR REPLACE INTO observed VALUES(?,?,?)', (root_id, rel, packed(sig)))
+                # Solo le firme nuove o diverse: una scansione senza novità non riscrive il registro.
+                if sig != previous.get(rel):
+                    con.execute('INSERT OR REPLACE INTO observed VALUES(?,?,?)', (root_id, rel, packed(sig)))
             con.execute('UPDATE roots SET last_scan=?,errors=? WHERE id=?', (stamp(), packed(errors), root_id))
             results.append({'root': root_id, 'baseline': baseline, 'observed': len(found), 'events': len(changes), 'errors': errors})
         con.commit()
@@ -472,7 +479,8 @@ def links(config):
             continue
         for match in LINK.finditer(page(path)):
             href = match[1].strip('<>')
-            if re.match(r'^(https?|mailto|app|codex|memory):', href):
+            if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]+:', href):
+                # URL con uno schema (http, mailto, file, app...), non un'unità di Windows come C:.
                 continue
             ref, _, anchor = href.partition('#')
             dest = (path.parent / unquote(ref)).resolve() if ref else path
