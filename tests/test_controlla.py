@@ -83,6 +83,18 @@ class DetectorTests(unittest.TestCase):
         self.scan(); self.assertEqual(self.items(),[])
         self.scan(full=True); self.assertEqual(self.items()[0]['kind'],'modified')
 
+    def test_unchanged_scan_does_not_rewrite_observed(self):
+        # Migliaia di file invariati non valgono migliaia di scritture a ogni sessione.
+        self.put('a.md','a'); self.put('b/c.md','c'); self.scan()
+        writes=[]; real=m.sqlite3.connect
+        def traced(db,**kw):
+            con=real(db,**kw); con.set_trace_callback(lambda s: writes.append(s) if 'observed' in s and s.startswith('INSERT') else None); return con
+        with patch.object(m.sqlite3,'connect',side_effect=traced): self.scan()
+        self.assertEqual(writes,[])
+        self.put('a.md','aa')
+        with patch.object(m.sqlite3,'connect',side_effect=traced): self.scan()
+        self.assertEqual(len(writes),1)
+
     def test_metadata_only_touch_is_not_content_change(self):
         p=self.put('a.md','same'); self.scan(); info=p.stat()
         os.utime(p,ns=(info.st_atime_ns,info.st_mtime_ns+1000000000)); self.scan()
@@ -343,6 +355,13 @@ class DetectorTests(unittest.TestCase):
         self.put('Archivio/vecchio.md','[rotto](manca.md)'); self.put('Bozze/b.md','[rotto](manca.md)')
         self.assertEqual(m.links(self.config)['issues'],[])
 
+    def test_links_skip_urls_but_check_absolute_paths(self):
+        # Un URL con uno schema qualsiasi non si verifica; un percorso assoluto tra <...>, come nella mappa, sì.
+        outside=self.base/'Documenti'; outside.mkdir()
+        self.put('AGENTS.md','[Mappa](MAPPA.md)'); self.put('MANUTENZIONE.md','# Manutenzione')
+        self.put('MAPPA.md',f'[f](file:///C:/x) [o](obsidian://open) [t](tel:+39) [d](<{outside.as_posix()}>) [m](<{(outside/"manca").as_posix()}>)')
+        self.assertEqual([i['target'] for i in m.links(self.config)['issues']],[(outside/'manca').as_posix()])
+
     def test_links_report_missing_start_pages(self):
         self.put('AGENTS.md','[Mappa](MAPPA.md)'); self.put('MAPPA.md','# Mappa')
         self.assertEqual(m.links(self.config)['issues'],
@@ -378,7 +397,8 @@ class DetectorTests(unittest.TestCase):
     def test_invalid_config_is_rejected(self):
         path=self.base/'config.json'; roots=[{'id':'x','path':'.'}]
         for config in ({},[],{'roots':[{'id':'x'}]},{'roots':[{'id':'x','path':None}]},
-                       {'roots':roots,'desktop':None},{'roots':roots,'database':''}):
+                       {'roots':roots,'desktop':None},{'roots':roots,'database':''},
+                       {'roots':roots,'exclude_files':'*.pyc'},{'roots':roots,'exclude_dirs':[None]}):
             path.write_text(json.dumps(config),encoding='utf-8')
             with self.assertRaises(ValueError,msg=config): m.load_config(path)
 
