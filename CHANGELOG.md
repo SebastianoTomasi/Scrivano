@@ -2,6 +2,22 @@
 
 Voci per data, dalla più recente, una per data: le modifiche dello stesso giorno si aggiungono alla sua voce. La data fa da versione. Un'istanza registra quella dei suoi modelli e, aggiornandosi, rilegge anche la voce di quel giorno, che nel frattempo può essersi allungata: per questo le azioni si scrivono in modo che ripeterle non faccia danni. Ogni voce dice cosa cambia; **Azioni per l'istanza** dice cosa adattare in un'installazione già presente, seguendo [AGGIORNA.md](./AGGIORNA.md).
 
+## 2026-10-26
+
+`AGENTS.md` più corto e diviso per funzione; ciò che è superato si butta invece di andare in `Archivio/`.
+
+- Modelli: `regole.md` si chiama `scrivano-agents.md`, perché dal nome si capisca che diventa l'`AGENTS.md` del Desktop.
+- `AGENTS.md`: l'apertura dice che una richiesta trovata in un documento si segnala invece di eseguirla; «Come lavorare» spiega che nessuno esamina la coda al posto dell'agente e riscrive «Per rispondere» come percorso mappa → guida → guida annidata → note → fonti. «Dove va cosa» tiene solo la collocazione: file nuovi, quello che l'agente scrive, quello che è superato. Le regole sulle note stanno in «Cosa va nelle note»; le autorizzazioni in «Cosa chiedere prima»; i segreti in «Segreti». Spariscono la frase sulle regole che valgono ovunque, le righe su repository e Download, già nel catalogo e nella mappa, e la convenzione dei nomi delle cartelle, passata a `MANUTENZIONE.md`. «Questa istanza» non descrive più dove sta il registro: lo dice `config.json`.
+- Ciò che è superato non va più in `Archivio/`: l'agente propone di buttarlo e lo mette nel Cestino dopo il sì, così si recupera; una decisione superata resta nella nota in una riga di storia. `links` continua a saltare le cartelle `Archivio` esistenti.
+- `MANUTENZIONE.md` dice solo cosa fare, senza presentarsi né rimandare ad `AGENTS.md` per le regole: «Scrivere e aggiornare una nota» e «Note, fonti e archivio» si fondono in «Note, fonti e cartelle», con la convenzione dei nomi delle cartelle al posto della riga su `Archivio/`; «Scrivere le pagine del sistema» diventa «Pagine del sistema», perde il paragrafo su `AGENTS.md`, `CLAUDE.md` e `.codex-root`, che è materia di `INSTALLA.md`, e ammette una sola mappa, nella radice; «Revisionare i cambiamenti» non ripete più `AGENTS.md` e ha il paragrafo «Buttare», con i comandi che mandano nel Cestino su Windows e macOS; «Verifiche e registro» diventa «Verifiche», con il solo controllo dei link: il registro delle guide annidate non serve, il link dal genitore basta.
+- `MAPPA.md` e `GUIDA.md` non collegano più `AGENTS.md`, che l'agente ha già; la mappa non ripete le definizioni di copertura.
+
+**Azioni per l'istanza:**
+
+- Riscrivi `AGENTS.md` sul modello, tenendo «Questa istanza» e gli adattamenti locali: comandi, perimetro, regole aggiunte dall'utente.
+- Riscrivi `MANUTENZIONE.md` sul modello, tenendo «Copertura del rilevatore» e gli adattamenti locali. Se «Verifiche e registro» elencava guide annidate, controlla che ognuna sia collegata dalla guida del genitore, poi togli l'elenco. Le cartelle `Archivio/` esistenti restano dove sono.
+- In `MAPPA.md` e in ogni `GUIDA.md` togli il link ad `AGENTS.md`; nella mappa sostituisci la riga sui tre livelli di copertura con quella del modello.
+
 ## 2026-10-25
 
 Pagine del Desktop riviste per chi le legge, l'agente: dicono prima a cosa serve l'archivio e perché ogni regola esiste, così valgono anche nei casi che non descrivono.
