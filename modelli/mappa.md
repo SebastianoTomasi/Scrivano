@@ -16,8 +16,8 @@ Cerca nella prima colonna le parole della domanda e apri la guida del dominio: d
 
 - **{{domanda ricorrente}}:** {{Dominio}} per {{aspetto}}, {{Dominio}} per {{aspetto}}.
 
-Ogni guida dichiara la sua copertura: **censito** vuol dire che si sa dov'è, **parzialmente esaminato** che se n'è letta una parte, indicata, **interpretato** che esiste una sintesi con le fonti. Nessuna etichetta garantisce attualità: controlla le date dei fatti.
+La copertura dichiarata da ogni guida (censito, parzialmente esaminato, interpretato) dice quanto se n'è letto, non quanto è attuale: controlla le date dei fatti.
 
-[Regole](./AGENTS.md) · [Manutenzione](./MANUTENZIONE.md)
+[Manutenzione](./MANUTENZIONE.md)
 
 Verificato: {{data}}

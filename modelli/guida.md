@@ -1,6 +1,6 @@
 # {{Dominio}}
 
-[Regole comuni](../AGENTS.md) · [Mappa generale](../MAPPA.md)
+[Mappa generale](../MAPPA.md)
 
 ## Confine
 
