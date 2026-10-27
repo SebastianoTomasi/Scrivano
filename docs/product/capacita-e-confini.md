@@ -41,7 +41,7 @@ I domini si scelgono dall'oggetto delle domande, non dal tipo di file o dal cont
 | Progetti | software e strumenti personali, se ci sono |
 | Collegamenti | collegamenti alle applicazioni |
 
-Nessun dominio vuoto. I nomi sono in PascalCase ASCII. Ricerca, o un dominio per un'attività propria, si aggiungono quando il materiale lo giustifica. Le guide di Finanze, Salute e Amministrazione portano già le regole locali, come distinguere fatti e stime e lasciare gli identificativi negli originali. Ciò che l'utente non sa collocare resta nella radice del Desktop. Il dettaglio di ogni dominio sta nel [catalogo dei domini](../../modelli/domini.md).
+Nessun dominio vuoto. I nomi sono in PascalCase ASCII. Ricerca, o un dominio per un'attività propria, si aggiungono quando il materiale lo giustifica. Le guide di Finanze, Salute e Amministrazione portano già le regole locali, come distinguere fatti e stime e lasciare gli identificativi negli originali. Ciò che l'utente non sa collocare resta nella radice del Desktop. Il dettaglio di ogni dominio sta nel [catalogo dei domini](../../src/modelli/domini.md).
 
 ## Non-obiettivi
 

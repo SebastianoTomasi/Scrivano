@@ -18,10 +18,12 @@ Risponde a `system-boundary`.
 Scrivano possiede il repository e ciò che ne nasce in un'istanza:
 
 - gli script, i modelli, il catalogo dei domini e le procedure del repository;
-- in un'istanza, lo strumento in `Documenti/Scrivano`, con accanto a `controlla.py` la configurazione e la cartella `.stato/` di registro, piani e giornali, ignorate da git; il rilevatore esclude lo strumento dalle radici che osserva;
+- in un'istanza, lo strumento in `Documenti/Scrivano`, con in `src/`, accanto a `controlla.py`, la configurazione e la cartella `.stato/` di registro, piani e giornali, ignorate da git; il rilevatore esclude lo strumento dalle radici che osserva;
 - sul Desktop, la forma delle pagine del sistema: `AGENTS.md`, `MAPPA.md`, `MANUTENZIONE.md` e le `GUIDA.md`, più `.codex-root` se l'utente usa Codex. Il contenuto delle pagine e le note appartengono all'utente.
 
 Sul Desktop non va nient'altro: nessuna skill, nessun puntatore in `~/.claude` o `~/.codex` oltre al marcatore di Codex. Per le cose personali l'utente apre l'agente sul Desktop.
+
+**Forma del repository.** `src/` contiene solo ciò che un'istanza esegue o copia: i due script, `config.example.json` e i modelli con il catalogo dei domini. Fuori da `src/` stanno le procedure che installano e aggiornano un'istanza, con il CHANGELOG e il README, e ciò che serve solo a sviluppare Scrivano: questi artifact, gli ADR, il glossario, le regole del delivery process advisor e i test. Lo strumento di un'istanza resta la copia dell'intero repository. I motivi sono nell'[ADR 0004](../adr/0004-src-contiene-cio-che-arriva-nell-istanza.md).
 
 Le pagine e le procedure sono istruzioni per un agente: per Scrivano valgono quanto il codice. Lo stato tecnico lo descrive il codice degli script; il comportamento dell'agente lo descrivono modelli e procedure.
 
@@ -43,9 +45,9 @@ Risponde a `components`.
 
 | Componente | Responsabilità |
 | --- | --- |
-| Rilevatore (`controlla.py`) | Osserva le radici, registra i cambiamenti in una coda, chiude gli eventi revisionati dopo averne ricontrollato il file, controlla link e ancore delle pagine. Non legge i documenti per capirli. |
-| Riordinatore (`riordina.py`) | Riassume una cartella in un inventario; esegue, riprende e annulla un piano approvato. Non sceglie le mosse. |
-| Modelli (`modelli/`) | Danno forma alle pagine del sistema e il catalogo dei domini da cui partono le proposte. Non si chiamano mai come i file che gli agenti caricano da soli (`AGENTS.md`, `CLAUDE.md`), così nessuno li scambia per istruzioni: il modello dell'`AGENTS.md` del Desktop è `scrivano-agents.md`, perché dal nome si capisca cosa diventa. L'agente li copia sul Desktop e li adatta. |
+| Rilevatore (`src/controlla.py`) | Osserva le radici, registra i cambiamenti in una coda, chiude gli eventi revisionati dopo averne ricontrollato il file, controlla link e ancore delle pagine. Non legge i documenti per capirli. |
+| Riordinatore (`src/riordina.py`) | Riassume una cartella in un inventario; esegue, riprende e annulla un piano approvato. Non sceglie le mosse. |
+| Modelli (`src/modelli/`) | Danno forma alle pagine del sistema e il catalogo dei domini da cui partono le proposte. Non si chiamano mai come i file che gli agenti caricano da soli (`AGENTS.md`, `CLAUDE.md`), così nessuno li scambia per istruzioni: il modello dell'`AGENTS.md` del Desktop è `scrivano-agents.md`, perché dal nome si capisca cosa diventa. L'agente li copia sul Desktop e li adatta. |
 | Procedure (`INSTALLA.md`, `AGGIORNA.md`, `CHANGELOG.md`) | Dicono all'agente come installare e aggiornare un'istanza; il CHANGELOG porta, per data, le azioni che un'istanza deve applicare. |
 | Pagine del sistema (sul Desktop) | Dicono all'agente di ogni sessione come lavorare, dove sta cosa e come tenere aggiornato l'archivio. Nascono dai modelli e poi sono dell'utente. |
 | Riferimento dello strumento (`README.md`) | Descrive comandi, configurazione, formato del piano e limiti degli script. Gli artifact fissano le garanzie e rimandano qui per la sintassi, senza copiarla. |

@@ -9,8 +9,8 @@ La guida di un dominio precisa queste regole al suo interno, e una sottocartella
 **A ogni sessione**, una volta, rileva i cambiamenti e leggi la coda, dal più recente:
 
 ```
-{{python}} "{{strumento}}/controlla.py" scan
-{{python}} "{{strumento}}/controlla.py" pending --limit 30
+{{python}} "{{strumento}}/src/controlla.py" scan
+{{python}} "{{strumento}}/src/controlla.py" pending --limit 30
 ```
 
 La coda elenca i file cambiati dall'ultima sessione, quasi sempre per mano dell'utente, e nessuno la esamina al posto tuo: prima di rispondere su un dominio con eventi in coda guarda cosa è cambiato, e chiudi con `review` e una nota solo gli eventi di cui hai letto il file e aggiornato le note. Comandi e chiusure in [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).

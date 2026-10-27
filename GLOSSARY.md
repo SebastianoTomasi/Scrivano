@@ -12,7 +12,7 @@ _Evita_: installazione, per indicare il risultato
 L'istanza da cui sono stati ricavati i modelli anonimi.
 
 **Strumento**:
-La copia del repository dentro un'istanza, con script, modelli e procedure.
+La copia del repository dentro un'istanza: procedure in radice, script e modelli in `src/`, dove l'istanza tiene anche configurazione e registro.
 _Evita_: tool, programma
 
 **Versione dei modelli**:

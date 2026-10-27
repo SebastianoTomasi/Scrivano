@@ -7,7 +7,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location('riordina', Path(__file__).resolve().parents[1]/'riordina.py')
+spec = importlib.util.spec_from_file_location('riordina', Path(__file__).resolve().parents[1]/'src'/'riordina.py')
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 

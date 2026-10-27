@@ -2,6 +2,20 @@
 
 Voci per data, dalla più recente, una per data: le modifiche dello stesso giorno si aggiungono alla sua voce. La data fa da versione. Un'istanza registra quella dei suoi modelli e, aggiornandosi, rilegge anche la voce di quel giorno, che nel frattempo può essersi allungata: per questo le azioni si scrivono in modo che ripeterle non faccia danni. Ogni voce dice cosa cambia; **Azioni per l'istanza** dice cosa adattare in un'installazione già presente, seguendo [AGGIORNA.md](./AGGIORNA.md).
 
+## 2026-10-27
+
+Lo strumento separa il prodotto da ciò che serve a svilupparlo: script, configurazione d'esempio e modelli passano in `src/`.
+
+- `controlla.py`, `riordina.py`, `config.example.json` e `modelli/` stanno in `src/`. Restano nella radice dello strumento `INSTALLA.md`, `AGGIORNA.md`, questo CHANGELOG e il README; documentazione di progetto, glossario e test restano fuori da `src/`.
+- `config.json` e `.stato/` dell'istanza stanno in `src/`, accanto agli script: senza `--config`, `controlla.py` cerca la configurazione nella propria cartella.
+- Modelli: in `AGENTS.md` e `MANUTENZIONE.md` i comandi chiamano `{{strumento}}/src/controlla.py` e `{{strumento}}/src/riordina.py`, e i piani piccoli vanno in `{{strumento}}/src/.stato/`.
+
+**Azioni per l'istanza:**
+
+- A scansioni ferme, se la radice dello strumento ha ancora `config.json` o `.stato/` e `src/` non li ha, spostali in `src/`. Un `database` relativo resta valido, perché parte dal file di configurazione; uno assoluto che porta dentro il vecchio `.stato/` va aggiornato. Piani e giornali si spostano insieme: un `annulla` si lancia sul piano nel suo nuovo posto.
+- Se la radice dello strumento ha ancora `controlla.py`, `riordina.py`, `config.example.json` o `modelli/`, come dopo un aggiornamento con lo zip, mettili nel Cestino: le copie valide sono in `src/`.
+- In `AGENTS.md` e `MANUTENZIONE.md` del Desktop, dove i comandi chiamano ancora `<strumento>/controlla.py` o `<strumento>/riordina.py`, aggiungi `src/` al percorso; fai lo stesso con `<strumento>/.stato/`. Se i comandi chiamano un lanciatore che esegue gli script del repository, aggiorna invece il percorso dentro il lanciatore.
+
 ## 2026-10-26
 
 `AGENTS.md` più corto e diviso per funzione; ciò che è superato si butta invece di andare in `Archivio/`.

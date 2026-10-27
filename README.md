@@ -38,27 +38,27 @@ Se l'utente ti chiede di installare il sistema, segui [INSTALLA.md](./INSTALLA.m
 
 `controlla.py` rileva i cambiamenti nei file e li tiene in una coda da revisionare, così le note derivate non restano indietro rispetto alle fonti. `riordina.py` fa l'inventario di una cartella ed esegue un piano di riordino approvato. Usano Python 3.10+ e solo la libreria standard, senza inviare dati in rete. Le decisioni spettano all'agente: `controlla.py` non modifica i file osservati e non interpreta i cambiamenti, `riordina.py` esegue soltanto il piano che riceve.
 
-Le decisioni di progetto sono in [docs](docs/), con il vocabolario in [GLOSSARY.md](GLOSSARY.md); i modelli delle pagine del Desktop e il catalogo dei domini in [modelli](./modelli/); le novità di ogni versione nel [CHANGELOG](./CHANGELOG.md).
+Ciò che serve a un'istanza sta in [src](./src/): i due script, [config.example.json](./src/config.example.json) e i [modelli](./src/modelli/) delle pagine del Desktop con il catalogo dei domini. Fuori da `src/` restano le procedure che installano e aggiornano un'istanza, con le novità di ogni versione nel [CHANGELOG](./CHANGELOG.md), e ciò che serve a chi sviluppa Scrivano: le decisioni di progetto in [docs](docs/), con il vocabolario in [GLOSSARY.md](GLOSSARY.md), e i test in [tests](tests/). I comandi qui sotto partono dalla cartella dello strumento.
 
 ### Comandi del rilevatore
 
 | Comando | Effetto |
 | --- | --- |
-| `python controlla.py scan` | Confronta tutte le radici con l'ultimo stato osservato |
-| `python controlla.py scan --root Desktop` | Controlla una radice; `--root` è ripetibile |
-| `python controlla.py scan --root Desktop --full` | Ricalcola le impronte anche a dimensione e timestamp invariati |
-| `python controlla.py pending --root Desktop --prefix Finanze --limit 30` | Filtra la coda, dal cambiamento più recente; non elimina gli elementi omessi |
-| `python controlla.py pending --root Desktop --depth 1` | Solo i cambiamenti nella radice; `--depth N` arriva fino a N livelli |
-| `python controlla.py review 12 13 --note 'esito della revisione'` | Chiude gli ID indicati dopo verifica del file corrente |
-| `python controlla.py review --root Desktop --prefix Personale/Foto --note 'foto censite'` | Chiude tutti gli eventi pendenti del filtro, con gli stessi controlli |
-| `python controlla.py status` | Mostra radici, errori e conteggi degli eventi |
-| `python controlla.py links` | Controlla link locali e ancore Markdown |
+| `python src/controlla.py scan` | Confronta tutte le radici con l'ultimo stato osservato |
+| `python src/controlla.py scan --root Desktop` | Controlla una radice; `--root` è ripetibile |
+| `python src/controlla.py scan --root Desktop --full` | Ricalcola le impronte anche a dimensione e timestamp invariati |
+| `python src/controlla.py pending --root Desktop --prefix Finanze --limit 30` | Filtra la coda, dal cambiamento più recente; non elimina gli elementi omessi |
+| `python src/controlla.py pending --root Desktop --depth 1` | Solo i cambiamenti nella radice; `--depth N` arriva fino a N livelli |
+| `python src/controlla.py review 12 13 --note 'esito della revisione'` | Chiude gli ID indicati dopo verifica del file corrente |
+| `python src/controlla.py review --root Desktop --prefix Personale/Foto --note 'foto censite'` | Chiude tutti gli eventi pendenti del filtro, con gli stessi controlli |
+| `python src/controlla.py status` | Mostra radici, errori e conteggi degli eventi |
+| `python src/controlla.py links` | Controlla link locali e ancore Markdown |
 
-Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows e macOS non distingue maiuscole e minuscole, e ovunque un accento vale composto o scomposto (NFC o NFD), come nei nomi creati su macOS. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python controlla.py --config percorso/config.json scan`.
+Gli ID sono esempi. `--prefix` è un percorso relativo alla radice, con `/` o `\`; su Windows e macOS non distingue maiuscole e minuscole, e ovunque un accento vale composto o scomposto (NFC o NFD), come nei nomi creati su macOS. L'output è JSON. Senza `--config` si usa `config.json` accanto allo script; per un'istanza altrove: `python src/controlla.py --config percorso/config.json scan`.
 
 ### Configurazione
 
-Parti da [config.example.json](./config.example.json). I percorsi relativi sono risolti rispetto al file di configurazione; `~` vale la cartella dell'utente.
+Parti da [config.example.json](./src/config.example.json) e copialo in `src/config.json`. I percorsi relativi sono risolti rispetto al file di configurazione; `~` vale la cartella dell'utente.
 
 - `desktop`: radice dell'archivio da cui parte `links`.
 - `database`: registro SQLite, di norma `.stato/registro.sqlite`; in una cartella locale, non sincronizzata.
@@ -86,10 +86,10 @@ Il registro conserva metadati, impronte ed eventi, senza copie dei contenuti. Le
 
 | Comando | Effetto |
 | --- | --- |
-| `python riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, pacchetti macOS, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
-| `python riordina.py esegui piano.json --prova` | Controlla il piano senza spostare nulla |
-| `python riordina.py esegui piano.json` | Esegue il piano |
-| `python riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
+| `python src/riordina.py inventario C:/Users/utente/Desktop` | Riassume la cartella: voci della radice con conteggi ed estensioni, cartelle-progetto, pacchetti macOS, file solo nel cloud, nomi da segreto, duplicati, file grandi, esclusioni suggerite; `--profondita N` limita la discesa, `--max N` le voci elencate (300) |
+| `python src/riordina.py esegui piano.json --prova` | Controlla il piano senza spostare nulla |
+| `python src/riordina.py esegui piano.json` | Esegue il piano |
+| `python src/riordina.py annulla piano.json` | Riporta indietro le mosse annotate nel giornale |
 
 L'inventario non entra nei pacchetti macOS, cartelle che il Finder mostra come un'app o un documento (librerie di Foto, progetti di GarageBand, alcuni documenti Pages o Keynote), e tralascia `.DS_Store` e `Thumbs.db`, metadati che il sistema rigenera. Un `.key` che è uno zip è una presentazione Keynote; gli altri contano come chiavi.
 
