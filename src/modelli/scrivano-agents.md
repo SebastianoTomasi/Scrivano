@@ -25,7 +25,7 @@ Se affidi una parte del lavoro a un subagent, nel brief nomina la guida del domi
 
 **Dopo aver risposto**, al massimo una proposta per sessione, in una riga che l'utente può ignorare: dove mettere i file nuovi della radice, oppure escludere dalla coda un rumore che si ripete. Se l'utente lascia i file dove sono, chiudi i loro eventi annotando la scelta. Se `total_pending` supera 50, una volta per sessione sfoltisci la coda partendo da `summary`: chiudi con una nota le rinomine di cartella e i gruppi di file che non toccano note.
 
-**Prima di finire**, se hai scritto, spostato o buttato qualcosa, rifai `scan` sulle radici toccate, rileggi `pending` e chiudi con `review` e una nota gli eventi che hai generato tu; poi esegui `links` finché non segnala problemi. Così la prossima sessione trova in coda solo ciò che ha cambiato l'utente. Comandi in [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).
+**Prima di finire**, se hai scritto, spostato o buttato qualcosa, rifai `scan` sulle radici toccate, rileggi `pending` e chiudi con `review` e una nota gli eventi che hai generato tu. Così la prossima sessione trova in coda solo ciò che ha cambiato l'utente. Poi fai le [verifiche](./MANUTENZIONE.md#verifiche): con `links` correggi i link delle pagine che hai toccato e riferisci all'utente i problemi che non dipendono da te; controlla che le note nuove siano raggiungibili dalla guida del dominio. Comandi in [MANUTENZIONE.md](./MANUTENZIONE.md#revisionare-i-cambiamenti).
 
 ## Dove va cosa
 

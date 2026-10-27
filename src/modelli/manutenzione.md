@@ -49,14 +49,14 @@ Quando e perché, in [AGENTS.md](./AGENTS.md#come-lavorare). I comandi usano il 
 
 Una rinomina di cartella si chiude così, con `review --prefix` sulla vecchia e sulla nuova, dopo aver controllato che i file `changed` o `only_from` di `folder_renames` non tocchino note o fonti.
 
-**Spostare.** Vale per ogni spostamento e ogni rinomina, anche di un solo file: una rinomina è una mossa con la stessa cartella e un nome nuovo. Dopo il sì dell'utente, scrivi un piano piccolo in `{{strumento}}/src/.stato/`, con un nome nuovo, ed eseguilo con `{{python}} "{{strumento}}/src/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle; lì piano e giornale restano fuori dalla coda. Lo spostamento compare poi come una cancellazione più un'aggiunta: aggiorna i link e chiudile insieme.
+**Spostare.** Vale per ogni spostamento e ogni rinomina, anche di un solo file: una rinomina è una mossa con la stessa cartella e un nome nuovo, e una che cambia solo maiuscole passa da un nome intermedio, in due piani. Dopo il sì dell'utente, scrivi un piano piccolo in `{{strumento}}/src/.stato/`, con un nome nuovo, ed eseguilo con `{{python}} "{{strumento}}/src/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle; lì piano e giornale restano fuori dalla coda. Lo spostamento compare poi come una cancellazione più un'aggiunta: aggiorna i link e chiudile insieme.
 
 **Buttare.** Dopo il sì dell'utente, nel Cestino con questi comandi, così si recupera. Prima togli i link che portavano lì.
 
 - Windows, da PowerShell: `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('C:\percorso\file', 'OnlyErrorDialogs', 'SendToRecycleBin')`, con `DeleteDirectory` per una cartella. Il Cestino di Windows può cancellare per sempre, senza avvisare, un elemento più grande del suo spazio o con un percorso troppo lungo: per un elemento grande chiedi prima all'utente, uno con un percorso lungo spostalo prima in un percorso corto con un piano.
 - macOS: `osascript -e 'tell application "Finder" to delete POSIX file "/percorso/file"'`.
 
-Poi controlla che sia arrivato. Windows: `(New-Object -ComObject Shell.Application).NameSpace(10).Items() | Where-Object { $_.ExtendedProperty('System.Recycle.DeletedFrom') -eq 'C:\percorso' } | ForEach-Object Name` elenca ciò che è arrivato da quella cartella, con il nome senza estensione se Esplora risorse le nasconde. macOS: `osascript -e 'tell application "Finder" to get name of every item of trash'`. Se non c'è, fermati e dillo all'utente.
+Poi controlla che sia arrivato. Windows: `(New-Object -ComObject Shell.Application).NameSpace(10).Items() | Where-Object { $_.ExtendedProperty('System.Recycle.DeletedFrom') -eq 'C:\cartella' } | ForEach-Object Name` elenca ciò che è arrivato dalla cartella che conteneva l'elemento, con il nome senza estensione se Esplora risorse le nasconde. macOS: `osascript -e 'tell application "Finder" to get name of every item of trash'`; se il Cestino aveva già un elemento con lo stesso nome, Finder aggiunge qualcosa al nome. Se non c'è, fermati e dillo all'utente.
 
 Mai `Remove-Item`, `del`, `rmdir`, `rm`, `shutil.rmtree` o altri comandi che cancellano per sempre, salvo che l'utente chieda espressamente una cancellazione definitiva. La cancellazione compare in coda: chiudila con una nota.
 
