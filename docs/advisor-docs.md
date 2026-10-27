@@ -17,11 +17,13 @@ records a settled decision, not evidence that it has been implemented.
 
 Code establishes what is implemented. Existing behavior absent from the docs  
 creates no obligation to change or document it. Accepted documentation guides  
-the work it specifies that has not yet been implemented. When code and docs  
-explicitly contradict one another, or a ticket or request contradicts an  
-accepted decision, the discrepancy needs clarification with the user before  
-acting on it; it proves neither a bug nor outdated documentation. Preserve the  
-implementation while the intended change is clarified.
+the work it specifies that has not yet been implemented. For behavior the  
+project may already have, read the code before the docs and answer from both.  
+When they contradict each other, say so, preserve the implementation, and  
+propose bringing the docs in line with the code; the contradiction alone  
+changes no document and proves no bug, and the user may instead confirm the  
+docs as the intended direction. A ticket or request contradicting an accepted  
+decision is likewise clarified with the user before acting on it.
 
 The advisor’s position is advice. Accepted decisions guide the agent’s  
 reasoning, while the user remains free to change direction. Proceeding against  
@@ -277,9 +279,10 @@ and writes each one, as it settles, into the documents that own it.
 
 1.  **Prepare** before the first question: read the owning authority's
     boundary, the catalog for the current scope or triggered need, and the
-    relevant artifacts and sources. The catalog's decisions and dependencies,
-    with the answers already settled, form the design tree whose frontier the
-    session asks. For a new capability, apply
+    relevant artifacts and sources, and the code of any behavior the project
+    already has. The catalog's decisions and dependencies, with the answers
+    already settled in documents or in code, form the design tree whose
+    frontier the session asks. For a new capability, apply
     [Feature identity](features/advisor-features.md#feature-identity) before
     the first write.
 2.  **Write** each answer into the artifact whose Scope owns it, reusing that

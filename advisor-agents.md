@@ -15,14 +15,25 @@ For work specified in documentation but not yet implemented, the relevant
 accepted decisions are part of its spec: read and follow them when planning,
 building, or reviewing it. Use the reading guidance below to find them.
 
-When code contradicts the documentation, or a ticket or request contradicts an
-accepted decision, surface the discrepancy before acting on it, and preserve
-the implementation while clarifying the intended change with the user. The
-discrepancy alone establishes neither a bug nor outdated documentation.
+Before explaining, planning, or changing behavior the project may already
+have, read the code first, then the documentation, and answer from both,
+because documentation read alone can describe a behavior the code has since
+replaced. Where the two agree, explain the implementation through the
+documents. Where they contradict each other, say so, keep the implementation,
+and propose bringing the documentation in line with the code; the
+contradiction alone changes no document and proves no bug, and the user may
+instead confirm the documentation as the intended direction. A ticket or
+request that contradicts an accepted decision is likewise raised before acting
+on it.
 
 Accepted artifacts record settled decisions; they do not prove that those
 decisions are implemented. Proposals and artifacts needing review do not
 establish accepted inputs; sources inform decisions without establishing rules.
+A passage read without its routing envelope is not yet an input, since a slice
+of a proposal reads like a slice of an accepted rule: before planning, building,
+reviewing, or telling the user what the project decided on it, read the
+document's title, status line, and Scope, and its Dependencies when the passage
+is a decision that relies on others.
 An artifact records decisions established with the user, including choices made
 within their explicit delegation. Choices made without that agreement or
 delegation remain proposed. The user may change direction; the advisor's advice
@@ -57,6 +68,9 @@ status, dependency, and acceptance rules are in
   put to the user, each with a recommended answer, the decisions the work
   depends on that neither an accepted artifact, its ticket, nor the
   conversation settles.
+- **Delegation.** A brief that delegates work names the documents that own its
+  subject, with their status, because a delegate finds documents through its
+  brief before anything else.
 - **Handoffs** name the decisions settled in the conversation but not yet
   written to their artifacts, suggesting `/grill-with-docs` to record them, and
   leave work that can wait beyond the next session to `deferred` issues.
@@ -73,17 +87,23 @@ status, dependency, and acceptance rules are in
 
 ## Reading guidance
 
-Open a known relevant artifact directly. When locating or placing documentation,
-use `docs/advisor-docs.md` to select the owning authority, then read its boundary.
-Consider both shared project rules and relevant feature artifacts. Select
-artifacts by filenames and opening passages containing the title, status, and
-Scope; read bodies whose scope can affect the work. Do not load the documentation
+Open a known relevant artifact directly. To find what the project decided on a
+subject, search inside the folders that hold it: `docs/<authority>/` for shared
+rules, `docs/features/<feature-slug>/` for a feature, `docs/adr/` for the
+reasons behind a decision; then follow the links those documents carry. For
+feature work, search the authority folders as well as the feature's, because
+shared rules bind every feature. The folders already name subject and owner,
+so this reaches the passage at a fraction of the cost of reading the common
+rules first. When a search finds nothing, the subject may be documented in
+other words: open the authority's boundary file or the authority table in
+`docs/advisor-docs.md`. To place a document, select its authority in that table
+and read the authority's boundary; to learn which decisions an action must
+cover, read only the catalog the action needs. Do not load the documentation
 tree as general context.
 
 Follow relevant Dependencies, Review blocks, and linked decision passages.
 Treat filenames and markers as routing information, not evidence of what a
-document establishes. Read a catalog when the action needs its decisions or
-coverage questions, selecting only the relevant scope and phase.
+document establishes.
 
 Look for sources in `docs/sources/` and `docs/<authority>/sources/`. For feature
 work, also inspect `docs/features/<feature-slug>/sources/` and
