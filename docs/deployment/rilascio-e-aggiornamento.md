@@ -19,7 +19,7 @@ Risponde a `deployment-environments`.
 | --- | --- | --- |
 | Branch di lavoro | Il cambiamento in corso | Commit del manutentore |
 | `main` su GitHub | La versione rilasciata | Pull request per gli script, commit diretto per il resto; sempre dopo i test |
-| Strumento di un'istanza (`Documenti/Scrivano`) | Script, modelli, procedure; accanto, `config.json` e `.stato/` dell'istanza | `git pull`, o un nuovo zip che lascia `config.json` e `.stato/`, quando l'utente chiede *aggiorna Scrivano* |
+| Strumento di un'istanza (`Documenti/Scrivano`) | L'intero repository: script e modelli in `src/`, con accanto `config.json` e `.stato/` dell'istanza; procedure in radice | `git pull`, o un nuovo zip che lascia `config.json` e `.stato/`, quando l'utente chiede *aggiorna Scrivano* |
 | Pagine del Desktop dell'istanza | Copie adattate dei modelli | L'agente applica le azioni del CHANGELOG seguendo `AGGIORNA.md` |
 | Desktop finto | Un'istanza di prova in una cartella temporanea | `tests/desktop_finto.py genera --strumento .` copia la copia di lavoro |
 

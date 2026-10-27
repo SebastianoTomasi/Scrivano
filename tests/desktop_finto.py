@@ -134,7 +134,7 @@ def impronte(base, salta=lambda rel: False):
     return sorted(found)
 
 def carica_controlla():
-    spec = importlib.util.spec_from_file_location('controlla', QUI.parent / 'controlla.py')
+    spec = importlib.util.spec_from_file_location('controlla', QUI.parent / 'src' / 'controlla.py')
     modulo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(modulo)
     return modulo
@@ -174,9 +174,9 @@ def verifica(cartella, strumento=None):
           {'mancanti': mancanti, 'altre_istruzioni': altre, 'segnaposto_rimasti': segnaposto})
 
     guide = list(desktop.rglob('GUIDA.md'))
-    if (strumento / 'config.json').is_file():
+    if (strumento / 'src' / 'config.json').is_file():
         controlla = carica_controlla()
-        config = controlla.load_config((strumento / 'config.json').resolve())
+        config = controlla.load_config((strumento / 'src' / 'config.json').resolve())
         visti = controlla.links(config)
         raggiunte = [v for v in visti['visited'] if v.endswith('GUIDA.md')]
         esito('link', not visti['issues'] and len(raggiunte) == len(guide) >= 3,
@@ -190,7 +190,7 @@ def verifica(cartella, strumento=None):
         else:
             esito('base', False, f'manca il registro {registro}: nessuna scansione')
     else:
-        esito('link', False, f'manca {strumento / "config.json"}')
+        esito('link', False, f'manca {strumento / "src" / "config.json"}')
         esito('base', False, 'nessuna configurazione')
 
     esito('segreto', all((desktop / s).is_file() for s in segreti), f'{", ".join(segreti)} nella radice')

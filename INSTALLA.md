@@ -36,7 +36,7 @@ Se l'utente ti indica una cartella di prova al posto del Desktop, usala come rad
    - Su macOS il `python3` di Apple, quello degli strumenti per sviluppatori, è spesso la 3.9; se gli strumenti mancano, apre la finestra che propone di installarli. In entrambi i casi proponi Python da python.org, con l'installer per macOS che l'utente apre e conferma con la sua password, oppure `brew install python` se c'è Homebrew, e attendi il sì. Usa poi il percorso completo, come `/usr/local/bin/python3` (python.org) o `/opt/homebrew/bin/python3` (Homebrew): un'app che parte con un PATH ridotto troverebbe prima quello di Apple.
 
    Il comando che risponde con la versione giusta diventa `{{python}}` nelle pagine del Desktop: `python` su Windows, il percorso completo su macOS.
-5. Porta il repository in `Documenti\Scrivano`, su macOS `~/Documents/Scrivano`: con git `git clone <indirizzo> "<Documenti>\Scrivano"`, altrimenti scarica lo zip del repository e scompattalo lì; su macOS usa lo zip anche quando `git` propone di installare gli strumenti per sviluppatori. Questa cartella è lo **strumento**: i comandi seguenti partono da qui.
+5. Porta il repository in `Documenti\Scrivano`, su macOS `~/Documents/Scrivano`: con git `git clone <indirizzo> "<Documenti>\Scrivano"`, altrimenti scarica lo zip del repository e scompattalo lì; su macOS usa lo zip anche quando `git` propone di installare gli strumenti per sviluppatori. Questa cartella è lo **strumento**: i comandi seguenti partono da qui. Ciò che serve all'istanza, cioè script, modelli e configurazione, sta nella sua cartella `src/`.
 6. Chiedi all'utente quali agenti usa, se non è evidente: Claude Code, Codex o entrambi. Claude Code legge `AGENTS.md` dalla versione 2.1.277: se `claude --version` ne mostra una precedente, proponi di aggiornarlo; la prima sessione dopo l'aggiornamento può ancora ignorare `AGENTS.md`, la successiva no.
 
 Fatto quando Python risponde, lo strumento è in Documenti e conosci Desktop, cartelle esterne e agenti.
@@ -46,9 +46,9 @@ Fatto quando Python risponde, lo strumento è in Documenti e conosci Desktop, ca
 1. Fai l'inventario del Desktop e, più in superficie, delle cartelle esterne:
 
    ```
-   python riordina.py inventario "<Desktop>"
-   python riordina.py inventario "<Documenti>" --profondita 2
-   python riordina.py inventario "<Download>" --profondita 1
+   python src/riordina.py inventario "<Desktop>"
+   python src/riordina.py inventario "<Documenti>" --profondita 2
+   python src/riordina.py inventario "<Download>" --profondita 1
    ```
 
 2. Apri i file che ti servono per decidere: nomi, date e un'occhiata al contenuto bastano quasi sempre. Un file `solo_cloud` si scarica quando lo apri: apri solo quelli indispensabili.
@@ -59,7 +59,7 @@ Fatto quando per ogni voce della radice sai cos'è e dove andrebbe, oppure perch
 
 ## 3. Proporre
 
-1. Costruisci i domini dal [catalogo](./modelli/domini.md): tieni quelli che hanno materiale, adattali e aggiungi i facoltativi che servono. Su macOS gli screenshot finiscono sulla Scrivania: se sono tanti, proponi una cartella dove raccoglierli, che l'utente può scegliere come destinazione da Cmd+Maiusc+5 → Opzioni.
+1. Costruisci i domini dal [catalogo](./src/modelli/domini.md): tieni quelli che hanno materiale, adattali e aggiungi i facoltativi che servono. Su macOS gli screenshot finiscono sulla Scrivania: se sono tanti, proponi una cartella dove raccoglierli, che l'utente può scegliere come destinazione da Cmd+Maiusc+5 → Opzioni.
 2. Scegli il livello di riordino:
    - **completo**: domini creati, file sparsi e cartelle esistenti al loro posto;
    - **leggero**: solo file sparsi e collegamenti; le cartelle esistenti restano dove sono e le guide le collegano;
@@ -75,12 +75,12 @@ Fatto quando l'utente ha approvato domini e livello.
 
 Se il livello è nessuno, passa al punto 5.
 
-1. Scrivi il piano in `.stato/riordino-AAAA-MM-GG.json` dentro lo strumento, nel formato del [README](./README.md#riordino). Scrivilo in UTF-8 con lo strumento di scrittura file dell'agente: `Set-Content` di Windows PowerShell 5.1 rovina le lettere accentate. I collegamenti (`.lnk`, `.url`, `.webloc`, alias del Finder) vanno in `Collegamenti`, salvo quelli che l'utente vuole tenere in vista. Le cartelle-contenitore che svuoti vanno in `vuote`, così non restano sul Desktop.
+1. Scrivi il piano in `src/.stato/riordino-AAAA-MM-GG.json` dentro lo strumento, nel formato del [README](./README.md#riordino). Scrivilo in UTF-8 con lo strumento di scrittura file dell'agente: `Set-Content` di Windows PowerShell 5.1 rovina le lettere accentate. I collegamenti (`.lnk`, `.url`, `.webloc`, alias del Finder) vanno in `Collegamenti`, salvo quelli che l'utente vuole tenere in vista. Le cartelle-contenitore che svuoti vanno in `vuote`, così non restano sul Desktop.
 2. Controlla e poi esegui:
 
    ```
-   python riordina.py esegui ".stato/riordino-AAAA-MM-GG.json" --prova
-   python riordina.py esegui ".stato/riordino-AAAA-MM-GG.json"
+   python src/riordina.py esegui "src/.stato/riordino-AAAA-MM-GG.json" --prova
+   python src/riordina.py esegui "src/.stato/riordino-AAAA-MM-GG.json"
    ```
 
    Se lo script si ferma (un file aperto, un percorso troppo lungo), risolvi la causa o togli la mossa e rilancia: le mosse già fatte vengono saltate.
@@ -94,11 +94,11 @@ Copia i modelli e sostituisci ogni segnaposto `{{...}}` con i valori di questa i
 
 | Modello | Destinazione |
 | --- | --- |
-| [modelli/scrivano-agents.md](./modelli/scrivano-agents.md) | `AGENTS.md` nella radice del Desktop |
-| [modelli/mappa.md](./modelli/mappa.md) | `MAPPA.md` nella radice del Desktop |
-| [modelli/manutenzione.md](./modelli/manutenzione.md) | `MANUTENZIONE.md` nella radice del Desktop |
-| [modelli/guida.md](./modelli/guida.md) | `GUIDA.md` in ogni dominio |
-| [config.example.json](./config.example.json) | `config.json` nello strumento |
+| [src/modelli/scrivano-agents.md](./src/modelli/scrivano-agents.md) | `AGENTS.md` nella radice del Desktop |
+| [src/modelli/mappa.md](./src/modelli/mappa.md) | `MAPPA.md` nella radice del Desktop |
+| [src/modelli/manutenzione.md](./src/modelli/manutenzione.md) | `MANUTENZIONE.md` nella radice del Desktop |
+| [src/modelli/guida.md](./src/modelli/guida.md) | `GUIDA.md` in ogni dominio |
+| [src/config.example.json](./src/config.example.json) | `src/config.json` nello strumento, accanto agli script |
 
 1. **Guide.** Confine e regole locali dal catalogo, adattati a quello che hai visto e a ciò che l'utente ha detto; «Dove va cosa» dalle sottocartelle tipiche del catalogo e da quelle che esistono già, con le convenzioni di nome che vedi in uso; ingressi dalle cartelle e dai file che il dominio contiene davvero; copertura "censito". Ometti le sezioni che restano vuote. Una sottocartella con regole proprie, o con troppe cose per capirsi dai nomi, prende una guida propria, collegata dalla guida del dominio.
 2. **Regole.** In «Questa istanza»: il perimetro, il percorso dello strumento e la data dei modelli, cioè la voce più recente del [CHANGELOG](./CHANGELOG.md).
@@ -109,8 +109,8 @@ Copia i modelli e sostituisci ogni segnaposto `{{...}}` con i valori di questa i
 7. **Verifica e base.**
 
    ```
-   python controlla.py links
-   python controlla.py scan
+   python src/controlla.py links
+   python src/controlla.py scan
    ```
 
 Fatto quando nelle pagine non resta nessun `{{`, `links` non segnala problemi, ogni guida è raggiungibile dalla mappa e la prima scansione ha creato la base senza errori.

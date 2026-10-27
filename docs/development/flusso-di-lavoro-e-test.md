@@ -16,7 +16,8 @@ Dice come un cambiamento al repository arriva su `main` e quali prove deve porta
 
 Risponde a `development-workflow`.
 
-- **Branch e pull request per gli script.** Un cambiamento a `controlla.py` o `riordina.py` si fa su un branch e arriva su `main` con una pull request. Modelli, procedure e documenti possono andare direttamente su `main`.
+- **Dove va un file.** In `src/` solo ciò che un'istanza esegue o copia; procedure, CHANGELOG e README in radice; documenti, regole dell'advisor e test fuori da `src/`, come dice la [forma del repository](../architecture/sistema-e-componenti.md#confine-del-sistema).
+- **Branch e pull request per gli script.** Un cambiamento a `src/controlla.py` o `src/riordina.py` si fa su un branch e arriva su `main` con una pull request. Modelli, procedure e documenti possono andare direttamente su `main`.
 - **Prima di consegnare.** `python -m unittest discover -s tests -v` passa.
 - **Nello stesso commit.** Se cambiano comandi, formato della configurazione o del piano, o il comportamento della coda, il README si aggiorna insieme al codice. Se cambiano modelli o procedure, il CHANGELOG riceve la voce del giorno con le azioni per l'istanza, come dice [Rilascio e aggiornamento](../deployment/rilascio-e-aggiornamento.md#procedura-di-rilascio).
 - **Repository pubblico.** Restano fuori `config.json`, `.stato/`, percorsi, nomi, note e dati personali, anche dai messaggi di commit. Modelli e procedure sono generici, con segnaposto `{{...}}`.

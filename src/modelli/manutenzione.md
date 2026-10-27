@@ -30,26 +30,26 @@ Prima di scrivere, leggi la nota canonica del tema, se c'è: un duplicato invecc
 Quando e perché, in [AGENTS.md](./AGENTS.md#come-lavorare). I comandi usano il percorso completo dello strumento, così valgono da qualsiasi cartella:
 
 ```
-{{python}} "{{strumento}}/controlla.py" pending --root Desktop --prefix Finanze --limit 30
+{{python}} "{{strumento}}/src/controlla.py" pending --root Desktop --prefix Finanze --limit 30
 ```
 
 **Leggere la coda.** Parte dal cambiamento più recente. `--prefix` è il percorso relativo alla radice; `--depth 1` mostra solo la radice, dove arrivano i file nuovi. Il limite tronca l'output: se `matched` supera gli elementi mostrati, alza il limite; gli altri eventi restano in coda. `summary` guarda tutti gli eventi filtrati: le cartelle con più eventi dicono dove sta il grosso della coda, e ogni voce di `folder_renames` è una cartella rinominata o spostata.
 
-**Chiudere.** Leggi i file pertinenti e aggiorna note e collegamenti; lascia aperti conflitti e cambiamenti non esaminati. Poi `{{python}} "{{strumento}}/controlla.py" scan --root Desktop` (o le radici coinvolte) e rileggi `pending`: anche le note che hai scritto generano eventi, e gli ID possono cambiare. Chiudi con una nota che dice cosa hai verificato; gli ID sono un esempio:
+**Chiudere.** Leggi i file pertinenti e aggiorna note e collegamenti; lascia aperti conflitti e cambiamenti non esaminati. Poi `{{python}} "{{strumento}}/src/controlla.py" scan --root Desktop` (o le radici coinvolte) e rileggi `pending`: anche le note che hai scritto generano eventi, e gli ID possono cambiare. Chiudi con una nota che dice cosa hai verificato; gli ID sono un esempio:
 
 ```
-{{python}} "{{strumento}}/controlla.py" review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
+{{python}} "{{strumento}}/src/controlla.py" review 12 13 --note 'Verificate le fonti; aggiornata la nota Finanze/BOLLETTE_CASA.md'
 ```
 
 **Chiudere in blocco.** Per filtro, gli eventi che non toccano note né fonti, per esempio foto aggiunte in una cartella senza note. `review` ricontrolla ogni file e, se uno è cambiato, non chiude nulla:
 
 ```
-{{python}} "{{strumento}}/controlla.py" review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
+{{python}} "{{strumento}}/src/controlla.py" review --root Desktop --prefix Personale/Foto --note 'Foto aggiunte; nessuna nota da aggiornare'
 ```
 
 Una rinomina di cartella si chiude così, con `review --prefix` sulla vecchia e sulla nuova, dopo aver controllato che i file `changed` o `only_from` di `folder_renames` non tocchino note o fonti.
 
-**Spostare.** Dopo il sì dell'utente, scrivi un piano piccolo in `{{strumento}}/.stato/`, con un nome nuovo, ed eseguilo con `{{python}} "{{strumento}}/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle; lì piano e giornale restano fuori dalla coda. Lo spostamento compare poi come una cancellazione più un'aggiunta: aggiorna i link e chiudile insieme.
+**Spostare.** Dopo il sì dell'utente, scrivi un piano piccolo in `{{strumento}}/src/.stato/`, con un nome nuovo, ed eseguilo con `{{python}} "{{strumento}}/src/riordina.py" esegui`: non sovrascrive, annota le mosse e permette di annullarle; lì piano e giornale restano fuori dalla coda. Lo spostamento compare poi come una cancellazione più un'aggiunta: aggiorna i link e chiudile insieme.
 
 **Buttare.** Dopo il sì dell'utente, nel Cestino, mai con un comando che cancella: così si recupera. Windows, da PowerShell: `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('C:\percorso\file', 'OnlyErrorDialogs', 'SendToRecycleBin')`, con `DeleteDirectory` per una cartella. macOS: `osascript -e 'tell application "Finder" to delete POSIX file "/percorso/file"'`. Prima togli i link che portavano lì; la cancellazione compare in coda, chiudila con una nota.
 
@@ -63,6 +63,6 @@ Quando cambi radici, profondità o esclusioni in `config.json`, aggiorna questa 
 
 ## Verifiche
 
-`{{python}} "{{strumento}}/controlla.py" links` controlla link e ancore delle pagine Markdown a partire dalla radice: correggi quelli rotti e controlla che le note nuove siano raggiungibili dalla guida pertinente. Non verifica significato, URL remoti, riferimenti testuali o link dentro PDF e DOCX.
+`{{python}} "{{strumento}}/src/controlla.py" links` controlla link e ancore delle pagine Markdown a partire dalla radice: correggi quelli rotti e controlla che le note nuove siano raggiungibili dalla guida pertinente. Non verifica significato, URL remoti, riferimenti testuali o link dentro PDF e DOCX.
 
 Verificato: {{data}}

@@ -1,6 +1,8 @@
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -13,7 +15,7 @@ def load(name, path):
     return module
 
 d = load('desktop_finto', REPO/'tests'/'desktop_finto.py')
-r = load('riordina', REPO/'riordina.py')
+r = load('riordina', REPO/'src'/'riordina.py')
 
 class FakeDesktopTests(unittest.TestCase):
     def setUp(self):
@@ -46,5 +48,16 @@ class FakeDesktopTests(unittest.TestCase):
         out=d.verifica(self.base)
         self.assertTrue(out['esiti']['contenuti']['ok']); self.assertTrue(out['esiti']['esterni']['ok'])
         self.assertFalse(out['esiti']['pagine']['ok']); self.assertFalse(out['ok'])
+
+    def test_verification_reads_config_next_to_the_scripts(self):
+        d.genera(self.base,strumento=REPO)
+        src=self.base/'Documenti'/'Scrivano'/'src'
+        config=json.loads((src/'config.example.json').read_text(encoding='utf-8'))
+        config['desktop']=str(self.base/'Desktop'); config['roots']=[{'id':'Desktop','path':str(self.base/'Desktop')}]
+        (src/'config.json').write_text(json.dumps(config),encoding='utf-8')
+        subprocess.run([sys.executable,str(src/'controlla.py'),'scan'],check=True,capture_output=True)
+        self.assertTrue((src/'.stato'/'registro.sqlite').is_file())
+        esiti=d.verifica(self.base)['esiti']
+        self.assertTrue(esiti['base']['ok']); self.assertIn('guide',esiti['link']['dettaglio'])
 
 if __name__=='__main__': unittest.main()
