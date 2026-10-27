@@ -80,6 +80,10 @@ Esiste una sintesi collegata alle fonti.
 La sola nota che raccoglie ciò che si sa di un tema.
 _Evita_: riassunto, appunto
 
+**Data dei fatti**:
+Il giorno a cui si riferisce ciò che una nota o una risposta afferma, diverso da quello in cui la pagina è stata scritta o verificata.
+_Evita_: data di aggiornamento
+
 **Fonte**:
 Un materiale usato per scrivere una nota, conservato accanto a essa.
 

@@ -1,6 +1,6 @@
 # Sistema e componenti di Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 
@@ -54,7 +54,7 @@ Risponde a `components`.
 
 L'agente non è un componente: è il sistema esterno che interpreta e decide. Ogni regola che richiede giudizio sta in una pagina o in una procedura; ogni garanzia che non può dipendere dal giudizio sta in uno script. Le garanzie servono in due punti, e solo lì ci sono script: spostare senza perdere nulla e sapere cosa è cambiato. Pagine e procedure danno obiettivi, principi e poche regole di sicurezza; il resto lo decide l'agente, come quante domande fare, come adattare la tassonomia, quando sfoltire la coda. I motivi sono nell'[ADR 0001](../adr/0001-gli-script-osservano-l-agente-decide.md).
 
-**Forma delle pagine.** C'è un solo `AGENTS.md`, nella radice del Desktop; le guide sono Markdown normali raggiunti dai link, come spiega l'[ADR 0002](../adr/0002-un-solo-agents-md-e-guide-collegate.md). Ogni dominio ha una `GUIDA.md` con confine, regole locali, dove vanno i documenti nuovi, ingressi e copertura. Le guide seguono le cartelle: una sottocartella con regole proprie, o cresciuta tanto che la guida del dominio non basta più a orientarcisi, prende una guida propria collegata dal genitore. La mappa resta una, nella radice.
+**Forma delle pagine.** C'è un solo `AGENTS.md`, nella radice del Desktop; le guide sono Markdown normali raggiunti dai link, come spiega l'[ADR 0002](../adr/0002-un-solo-agents-md-e-guide-collegate.md). Ogni dominio ha una `GUIDA.md` con confine, regole locali, dove vanno i documenti nuovi, ingressi e copertura. Le guide seguono le cartelle: una sottocartella con regole proprie, o cresciuta tanto che la guida del dominio non basta più a orientarcisi, prende una guida propria collegata dal genitore. La mappa resta una, nella radice, ed entra nel contesto di ogni sessione perché `AGENTS.md` la importa: è corta, e così il primo passo verso la guida non costa una lettura.
 
 ## Dipendenze tra componenti
 

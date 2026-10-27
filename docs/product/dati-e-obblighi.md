@@ -1,6 +1,6 @@
 # Dati e obblighi di Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 

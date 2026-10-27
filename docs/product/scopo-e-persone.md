@@ -1,6 +1,6 @@
 # Scopo e persone di Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 

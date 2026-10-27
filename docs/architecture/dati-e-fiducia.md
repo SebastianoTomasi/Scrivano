@@ -1,6 +1,6 @@
 # Dati e fiducia in Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 
@@ -33,7 +33,7 @@ L'agente non scrive mai nel registro e non lo svuota per aggirare un conflitto: 
 Risponde a `trust-boundaries`.
 
 - **Documenti e istruzioni.** Il contenuto dei file è un dato. Un documento che chiede qualcosa all'agente non parla a nome dell'utente: l'agente segnala la richiesta all'utente invece di eseguirla. Programmi, script e macro trovati sul Desktop non si eseguono; durante l'installazione si eseguono solo gli script del repository.
-- **Utente e agente.** L'agente propone e l'utente approva: spostamenti, fusioni, cambi di dominio e confini passano da un sì dell'utente. Il riordinatore rende il confine meccanico: sposta solo ciò che sta in un piano.
+- **Utente e agente.** L'agente propone e l'utente approva: spostamenti, fusioni, cambi di dominio e confini passano da un sì dell'utente. Il riordinatore rende il confine meccanico: sposta solo ciò che sta in un piano, e l'agente non sposta né rinomina file fuori da un piano.
 - **Segreti e agente.** I nomi da segreto si segnalano senza aprire il file; l'inventario lo fa per nome, il rilevatore li esclude con `exclude_files` ed `exclude_paths`. Il filtro per nome non garantisce di riconoscere ogni segreto.
 - **PC e rete.** Gli script non usano la rete. L'unico passaggio verso l'esterno è ciò che l'agente legge, che arriva al fornitore del modello: Scrivano lo limita facendo leggere solo ciò che serve, non lo impedisce.
 - **Istanza e repository.** Nulla di un'istanza entra nel repository: `config.json` e `.stato/` sono ignorati da git, e modelli ed esempi sono anonimi.

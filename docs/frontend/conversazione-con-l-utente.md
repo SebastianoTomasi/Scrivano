@@ -1,6 +1,6 @@
 # Conversazione con l'utente in Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 

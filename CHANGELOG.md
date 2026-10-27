@@ -4,17 +4,22 @@ Voci per data, dalla più recente, una per data: le modifiche dello stesso giorn
 
 ## 2026-10-27
 
-Lo strumento separa il prodotto da ciò che serve a svilupparlo: script, configurazione d'esempio e modelli passano in `src/`.
+Lo strumento separa il prodotto da ciò che serve a svilupparlo: script, configurazione d'esempio e modelli passano in `src/`. L'agente trova le risposte partendo dalla mappa già nel contesto, chiude il proprio lavoro prima di finire e sposta e butta solo in modo recuperabile.
 
 - `controlla.py`, `riordina.py`, `config.example.json` e `modelli/` stanno in `src/`. Restano nella radice dello strumento `INSTALLA.md`, `AGGIORNA.md`, questo CHANGELOG e il README; documentazione di progetto, glossario e test restano fuori da `src/`.
 - `config.json` e `.stato/` dell'istanza stanno in `src/`, accanto agli script: senza `--config`, `controlla.py` cerca la configurazione nella propria cartella.
 - Modelli: in `AGENTS.md` e `MANUTENZIONE.md` i comandi chiamano `{{strumento}}/src/controlla.py` e `{{strumento}}/src/riordina.py`, e i piani piccoli vanno in `{{strumento}}/src/.stato/`.
+- Modello di `AGENTS.md`: la riga `@MAPPA.md` carica la mappa nel contesto di Claude Code, e una frase dice a Codex di leggerla. «Per rispondere» apre sempre la guida del dominio, lascia cercare liberamente dentro il dominio e su tutto il Desktop solo come ripiego, che insegna alla mappa le parole della domanda; dice quando aprire il documento invece della nota, che sui fatti vince il documento e che la risposta riporta copertura e data dei fatti. Un brief a un subagent nomina guida e note del tema. «Prima di finire» è il quarto passo di «Come lavorare»: `scan`, `review` degli eventi generati dall'agente e `links`. In «Dove va cosa» ogni spostamento o rinomina passa da `riordina.py` e ciò che si butta va nel Cestino con una verifica.
+- Modello di `MANUTENZIONE.md`: «Spostare» vale anche per un solo file e per le rinomine; «Buttare» aggiunge la verifica dell'arrivo nel Cestino, il rischio del Cestino di Windows con elementi grandi o percorsi lunghi e i comandi da non usare.
 
 **Azioni per l'istanza:**
 
 - A scansioni ferme, se la radice dello strumento ha ancora `config.json` o `.stato/` e `src/` non li ha, spostali in `src/`. Un `database` relativo resta valido, perché parte dal file di configurazione; uno assoluto che porta dentro il vecchio `.stato/` va aggiornato. Piani e giornali si spostano insieme: un `annulla` si lancia sul piano nel suo nuovo posto.
 - Se la radice dello strumento ha ancora `controlla.py`, `riordina.py`, `config.example.json` o `modelli/`, come dopo un aggiornamento con lo zip, mettili nel Cestino: le copie valide sono in `src/`.
 - In `AGENTS.md` e `MANUTENZIONE.md` del Desktop, dove i comandi chiamano ancora `<strumento>/controlla.py` o `<strumento>/riordina.py`, aggiungi `src/` al percorso; fai lo stesso con `<strumento>/.stato/`. Se i comandi chiamano un lanciatore che esegue gli script del repository, aggiorna invece il percorso dentro il lanciatore.
+- Nell'`AGENTS.md` del Desktop, se manca la riga `@MAPPA.md`, aggiungi dopo il primo paragrafo la frase per Codex e quella riga, come nel modello.
+- Sempre in `AGENTS.md`, porta al modello «Per rispondere», con il paragrafo sul brief, e aggiungi «Prima di finire» dopo «Dopo aver risposto», se manca; in «Tenere le pagine aggiornate» la chiusura rimanda a «Prima di finire». In «Dove va cosa» aggiungi la riga sugli spostamenti con `riordina.py` e porta al modello quella sul Cestino. Conserva gli adattamenti locali di quei paragrafi.
+- In `MANUTENZIONE.md` del Desktop porta al modello «Spostare» e «Buttare», se non ci sono già la rinomina, la verifica dell'arrivo nel Cestino e i comandi da non usare.
 
 ## 2026-10-26
 
