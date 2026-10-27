@@ -1,6 +1,6 @@
 # Capacità e confini di Scrivano
 
-**Status:** proposed
+**Status:** accepted
 
 ## Scope
 
@@ -17,11 +17,11 @@ Risponde a `observable-capabilities`.
 
 1. **Installare chiedendolo.** L'utente apre l'agente sul Desktop e scrive *installa Scrivano da* seguito dall'indirizzo del repository. Se il sistema c'è già, l'agente passa all'aggiornamento. L'installazione si chiude con quattro cose da sapere: aprire l'agente sul Desktop, dove lasciare i file nuovi, cosa chiedere, a cosa serve la coda. Poi l'agente offre di interpretare subito un dominio.
 2. **Approvare un'organizzazione.** L'agente propone domini e un livello di riordino (completo, leggero o nessuno), con poche domande legate al materiale; l'utente approva il riassunto o lo corregge.
-3. **Riordinare e tornare indietro.** Il Desktop si riordina secondo il piano approvato; ogni correzione a parole diventa un piano in più, e ogni spostamento si può annullare. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella. Una cartella-contenitore anonima si svuota solo con l'approvazione dell'utente e, rimasta vuota o con i soli metadati rigenerati, si toglie. I collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide all'installazione: dopo restano fermi, e uno con un ambiente virtuale resta dov'è.
-4. **Chiedere dei propri documenti.** L'agente risponde partendo da mappa, guide e note, e sa dire quanto di un dominio ha letto. Dopo l'installazione le guide sono uno scheletro con copertura «censito»: i domini si interpretano quando l'utente lo chiede.
+3. **Riordinare e tornare indietro.** Il Desktop si riordina secondo il piano approvato; ogni correzione a parole diventa un piano in più, e ogni spostamento si può annullare. Si spostano file sparsi o cartelle intere, mai l'interno di una cartella. Una cartella-contenitore anonima si svuota solo con l'approvazione dell'utente e, rimasta vuota o con i soli metadati rigenerati, si toglie. I collegamenti alle applicazioni vanno in `Collegamenti`. Dove stanno i repository si decide all'installazione: dopo restano fermi, e uno con un ambiente virtuale resta dov'è. Anche dopo l'installazione ogni spostamento o rinomina, pure di un solo file, passa da un piano, così si annulla allo stesso modo.
+4. **Chiedere dei propri documenti.** L'agente arriva dalla mappa alla guida del dominio, risponde da note e documenti e dice quanto del dominio ha letto e a quando risalgono i fatti; il dettaglio sta nella feature [Consultazione](../features/consultazione/product/consultazione.md). Dopo l'installazione le guide sono uno scheletro con copertura «censito»: i domini si interpretano quando l'utente lo chiede.
 5. **Lasciare i file nuovi sul Desktop.** L'agente propone dove metterli, e un nome se quello che hanno non dice nulla, al massimo una volta per sessione; un no chiude la questione.
 6. **Ricevere ciò che l'agente scrive già al suo posto.** Una lettera o un riepilogo nasce nella cartella del tema, non nella radice né in Download.
-7. **Avere note al passo con i documenti.** A ogni sessione l'agente sa quali file sono cambiati dall'ultima volta e riconcilia le note prima di fidarsene. La coda si tiene corta da sola: oltre i 50 eventi, una volta per sessione e dopo aver risposto, l'agente chiude ciò che non richiede lavoro, come rinomine e gruppi che non toccano note, e propone di escludere il rumore che si ripete.
+7. **Avere note al passo con i documenti.** A ogni sessione l'agente sa quali file sono cambiati dall'ultima volta e riconcilia le note prima di fidarsene. Prima di finire chiude gli eventi che ha generato lui, così la sessione dopo trova in coda solo ciò che è cambiato davvero. La coda si tiene corta da sola: oltre i 50 eventi, una volta per sessione e dopo aver risposto, l'agente chiude ciò che non richiede lavoro, come rinomine e gruppi che non toccano note, e propone di escludere il rumore che si ripete.
 8. **Aggiornare chiedendolo.** Con *aggiorna Scrivano* l'istanza arriva alla versione più recente, senza perdere gli adattamenti delle pagine.
 9. **Disinstallare.** Si cancellano strumento, registro e pagine del sistema; riordino e note restano.
 10. **Usarlo con il Desktop nel cloud.** Il Desktop è quello reale, anche quando Windows lo reindirizza su OneDrive o macOS lo tiene su iCloud. Il sistema funziona lì e non scarica i file che stanno solo nel cloud.
@@ -53,7 +53,7 @@ Risponde a `non-goals`.
 - **Niente installatore, plugin o skill.** Installa l'agente seguendo istruzioni scritte, come spiega l'[ADR 0001](../adr/0001-gli-script-osservano-l-agente-decide.md); nulla va in `~/.claude` o `~/.codex`, salvo il marcatore che Codex richiede.
 - **Gli script non decidono.** Non interpretano i cambiamenti, non scelgono dove va un file e non riconoscono autore o significato di una modifica.
 - **Non tocca l'interno di una cartella con un'identità.** Progetti, corsi, viaggi e pratiche si spostano interi; i repository restano fermi dopo l'installazione.
-- **Non cancella da solo.** Ciò che è superato l'agente propone di buttarlo e lo mette nel Cestino dopo il sì dell'utente, così si recupera; gli script tolgono solo i metadati che il sistema rigenera, nelle cartelle che il piano svuota.
+- **Non cancella da solo.** Ciò che è superato l'agente propone di buttarlo e lo mette nel Cestino dopo il sì dell'utente e controlla che ci sia arrivato, così si recupera; cancella per sempre solo se l'utente lo chiede espressamente; gli script tolgono solo i metadati che il sistema rigenera, nelle cartelle che il piano svuota.
 - **Non custodisce segreti.** Li segnala; il loro posto è il password manager.
 - **Non condivide.** Nessuna sincronizzazione tra PC o persone, nessuna esportazione delle note, nessun accesso alla rete dagli script.
 - **Non serve gli altri utenti del PC.** `Public\Desktop` resta fuori.
